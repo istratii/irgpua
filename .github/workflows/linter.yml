@@ -1,0 +1,28 @@
+name: Lint C/C++/Cuda Code
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code 
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Dependencies
+        run: sudo apt install clang-format -y
+      - name: Lint Code
+        run: |
+          find src/ \( -name '*.c' -o -name '*.h' -o -name '*.cc' -o -name '*.hh' -o -name '*.cpp' -o -name '*.hpp' -o -name '*.cu' -o -name '*.cuh' \) -print0 | xargs -0 clang-format --style=file -i
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Commit linter changes"
