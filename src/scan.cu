@@ -98,10 +98,10 @@ void scan(rmm::device_uvector<int>& buffer, bool inclusive)
   _init_descriptors<<<(MAX_BLOCKS + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
                       THREADS_PER_BLOCK, 0, buffer.stream()>>>();
 
-  _scan<int>
-    <<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
-       THREADS_PER_BLOCK, THREADS_PER_BLOCK * sizeof(int), buffer.stream()>>>(
-      raft::device_span<int>(buffer.data(), buffer.size()));
+  _scan<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
+          THREADS_PER_BLOCK, THREADS_PER_BLOCK * sizeof(int),
+          buffer.stream()>>>(
+    raft::device_span<int>(buffer.data(), buffer.size()));
 
   CUDA_CHECK_ERROR(cudaStreamSynchronize(buffer.stream()));
 }
