@@ -93,13 +93,14 @@ __global__ void _scan(raft::device_span<int> buffer)
 void scan(rmm::device_uvector<int>& buffer, ScanMode mode)
 {
   const int tmp = 0;
-  cudaMemcpyToSymbol(counter, &tmp, sizeof(int), 0, cudaMemcpyHostToDevice);
+  CUDA_CHECK_ERROR(
+    cudaMemcpyToSymbol(counter, &tmp, sizeof(int), 0, cudaMemcpyHostToDevice));
 
   _init_descriptors<<<(MAX_BLOCKS + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
                       THREADS_PER_BLOCK, 0, buffer.stream()>>>();
 
   if (mode == SCAN_EXCLUSIVE)
-    cudaMemset(buffer.data(), 0, sizeof(int));
+    CUDA_CHECK_ERROR(cudaMemset(buffer.data(), 0, sizeof(int)));
 
   _scan<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
           THREADS_PER_BLOCK, THREADS_PER_BLOCK * sizeof(int),
