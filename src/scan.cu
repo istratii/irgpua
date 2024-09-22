@@ -13,7 +13,7 @@ __device__ int global[MAX_BLOCKS];
 __device__ int local[MAX_BLOCKS];
 __device__ cuda::atomic<int, cuda::thread_scope_device> states[MAX_BLOCKS];
 
-__global__ void _init_descriptors()
+static __global__ void _init_descriptors()
 {
   const unsigned int id = blockIdx.x * blockDim.x + threadIdx.x;
   global[id] = 0;
@@ -21,7 +21,7 @@ __global__ void _init_descriptors()
   states[id] = X;
 }
 
-__global__ void _scan(raft::device_span<int> buffer)
+static __global__ void _scan(raft::device_span<int> buffer)
 {
   __shared__ unsigned int bid;
   __shared__ unsigned int state;
