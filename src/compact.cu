@@ -10,8 +10,7 @@
 __global__ void compact_kernel(int* d_in, int* d_predicate, int size)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < size)
-    d_predicate[idx] = (d_in[idx] != GARBAGE_VAL) ? 1 : 0;
+  d_predicate[idx] = (d_in[idx] != GARBAGE_VAL)
 }
 
 __global__ void
