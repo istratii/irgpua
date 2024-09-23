@@ -1,37 +1,57 @@
-constexpr int garbage_val = -27;
+#include <cuda_runtime.h>
+#include <rmm/device_uvector.hpp>
+#include <rmm/mr/device/cuda_memory_resource.hpp>
+#include <rmm/mr/device/default_memory_resource.hpp>
+#include <raft/linalg/scan.cuh>
+#include <raft/handle.hpp>
 
-__global__ void
-compact_kernel(int* d_in, int* d_out, int* d_predicate, int size)
+#define GARBAGE_VAL -27
+
+__global__ void compact_kernel(int* d_in, int* d_predicate, int size)
 {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < size)
-    d_predicate[idx] = (d_in[idx] != garbage_val) ? 1 : 0;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size)
+        d_predicate[idx] = (d_in[idx] != GARBAGE_VAL) ? 1 : 0;
 }
 
-__global__ void
-scatter_kernel(int* d_in, int* d_out, int* d_predicate, int size)
+__global__ void scatter_kernel(int* d_in, int* d_out, int* d_predicate, int size)
 {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < size && d_in[idx] != garbage_val)
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size && d_in[idx] != GARBAGE_VAL)
     {
-      int targetIdx = d_predicate[idx];
-      d_out[targetIdx] = d_in[idx];
+        int out_idx = d_predicate[idx];
+        d_out[out_idx] = d_in[idx];
     }
 }
 
-void compact(int* d_in, int* d_out, int* d_predicate, int size)
+void compact(rmm::device_uvector<int>& d_in, rmm::device_uvector<int>& d_out, int size, cudaStream_t stream)
 {
-  int threadsPerBlock = 256;
-  int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+    // Création d'un handle RAFT = même flux + plus de synchro
+    raft::handle_t handle;
+    handle.set_stream(stream);
 
-  compactKernel<<<blocksPerGrid, threadsPerBlock>>>(d_in, d_predicate, size);
-  cudaDeviceSynchronize();
+    rmm::device_uvector<int> d_predicate(size, stream);
 
-  // A remplacer par notre scan pour la version handwwritten
-  thrust::exclusive_scan(thrust::device, d_predicate, d_predicate + size,
-                         d_predicate);
+    int threadsPerBlock = 256;
+    int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
 
-  scatterKernel<<<blocksPerGrid, threadsPerBlock>>>(d_in, d_out, d_predicate,
-                                                    size);
-  cudaDeviceSynchronize();
+    compact_kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
+        d_in.data(),
+        d_predicate.data(),
+        size);
+    cudaStreamSynchronize(stream);
+
+    raft::linalg::inclusive_scan(
+        handle,
+        d_predicate.data(),
+        d_predicate.data(),
+        size,
+        stream);
+
+    scatter_kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
+        d_in.data(),
+        d_out.data(),
+        d_predicate.data(),
+        size);
+    cudaStreamSynchronize(stream);
 }
