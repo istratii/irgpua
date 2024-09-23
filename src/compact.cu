@@ -37,10 +37,9 @@ void compact(rmm::device_uvector<int>& d_in,
   int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
 
   scatter_kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
-    raft::device_span<int>(d_in.data(), d_in.size()), 
-    raft::device_span<int>(d_out.data(), d_out.size()), 
-    raft::device_span<int>(d_predicate.data(), d_predicate.size()), 
-    size);
+    raft::device_span<int>(d_in.data(), d_in.size()),
+    raft::device_span<int>(d_out.data(), d_out.size()),
+    raft::device_span<int>(d_predicate.data(), d_predicate.size()), size);
   cudaStreamSynchronize(stream);
 
   raft::linalg::inclusive_scan(handle, d_predicate.data(), d_predicate.data(),
