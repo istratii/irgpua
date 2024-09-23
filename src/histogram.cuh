@@ -7,4 +7,4 @@
 
 #include "cuda_tools/cuda_error_checking.cuh"
 
-void histogram(rmm::device_uvector<int>& buffer);
+rmm::device_buffer histogram(rmm::device_uvector<int>& buffer);

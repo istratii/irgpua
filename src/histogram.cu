@@ -24,7 +24,7 @@ static __global__ void _histogram(raft::device_span<int> buffer,
 
 #define THREADS_PER_BLOCK 1024
 
-void histogram(rmm::device_uvector<int>& buffer)
+rmm::device_buffer histogram(rmm::device_uvector<int>& buffer)
 {
   constexpr unsigned int hist_bytes_size = 256 * sizeof(int);
   rmm::device_buffer hist(hist_bytes_size, buffer.stream());
@@ -36,4 +36,6 @@ void histogram(rmm::device_uvector<int>& buffer)
     raft::device_span<int>(static_cast<int*>(hist.data()), buffer.size()));
 
   CUDA_CHECK_ERROR(cudaStreamSynchronize(buffer.stream()));
+
+  return hist;
 }
