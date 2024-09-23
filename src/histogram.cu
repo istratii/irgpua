@@ -1,9 +1,6 @@
 
 #include "histogram.cuh"
 
-#include <raft/core/device_span.hpp>
-#include <raft/core/handle.hpp>
-
 static __global__ void _histogram(raft::device_span<int> buffer,
                                   raft::device_span<int> hist)
 {
@@ -29,15 +26,14 @@ static __global__ void _histogram(raft::device_span<int> buffer,
 
 void histogram(rmm::device_uvector<int>& buffer)
 {
-  const raft::handle_t handle{};
-  rmm::device_uvector<int> hist(256, handle.get_stream());
-  thrust::uninitialized_fill(handle.get_thrust_policy(), buffer.begin(),
-                             buffer.end(), 0);
+  constexpr unsigned int hist_bytes_size = 256 * sizeof(int);
+  rmm::device_buffer hist(hist_bytes_size, buffer.stream());
+  CUDA_CHECK_ERROR(cudaMemset(hist.data(), 0, hist_bytes_size));
 
   _histogram<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
-               THREADS_PER_BLOCK, sizeof(int) * 256, buffer.stream()>>>(
+               THREADS_PER_BLOCK, hist_bytes_size, buffer.stream()>>>(
     raft::device_span<int>(buffer.data(), buffer.size()),
-    raft::device_span<int>(hist.data(), buffer.size()));
+    raft::device_span<int>(static_cast<int*>(hist.data()), buffer.size()));
 
-  // CUDA_CHECK_ERROR(cudaStreamSynchronize(buffer.stream()));
+  CUDA_CHECK_ERROR(cudaStreamSynchronize(buffer.stream()));
 }
