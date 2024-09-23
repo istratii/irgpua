@@ -29,31 +29,22 @@ void compact(rmm::device_uvector<int>& d_in,
              rmm::device_uvector<int>& d_out,
              raft::handle_t const& handle)
 {
-    cudaStream_t stream = handle.get_stream();
-    std::size_t size = d_in.size();
+  cudaStream_t stream = handle.get_stream();
+  std::size_t size = d_in.size();
 
-    rmm::device_uvector<int> d_predicate(size, stream);
+  rmm::device_uvector<int> d_predicate(size, stream);
 
-    int threadsPerBlock = 256;
-    int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+  int threadsPerBlock = 256;
+  int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
 
-    compact_kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
-        d_in.data(),
-        d_predicate.data(),
-        size);
-    cudaStreamSynchronize(stream);
+  compact_kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
+    d_in.data(), d_predicate.data(), size);
+  cudaStreamSynchronize(stream);
 
-    raft::linalg::inclusive_scan(
-        handle,
-        d_predicate.data(),
-        d_predicate.data(),
-        size,
-        stream);
+  raft::linalg::inclusive_scan(handle, d_predicate.data(), d_predicate.data(),
+                               size, stream);
 
-    scatter_kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
-        d_in.data(),
-        d_out.data(),
-        d_predicate.data(),
-        size);
-    cudaStreamSynchronize(stream);
+  scatter_kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
+    d_in.data(), d_out.data(), d_predicate.data(), size);
+  cudaStreamSynchronize(stream);
 }
