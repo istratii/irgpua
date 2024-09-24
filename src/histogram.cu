@@ -69,7 +69,7 @@ static __global__ void _equalize_histogram(raft::device_span<int> buffer,
 
   if (id < N)
     buffer[id] = roundf((hist[buffer[id]] - s_cdf_min)
-                        / static_cast<float>(N - s_cdf_min + 1e-9) * 255.0f);
+                        / static_cast<float>(N - s_cdf_min + 1e-9f) * 255.0f);
 }
 
 void equalize_histogram(rmm::device_uvector<int>& buffer,
