@@ -6,7 +6,8 @@ static __global__ void _compact_kernel(raft::device_span<int> buffer,
                                        raft::device_span<int> d_predicate)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  d_predicate[idx] = (buffer[idx] != GARBAGE_VAL);
+  if (idx < buffer.size())
+    d_predicate[idx] = buffer[idx] != GARBAGE_VAL;
 }
 
 static __global__ void _scatter_kernel(raft::device_span<int> buffer,
