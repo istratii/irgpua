@@ -28,8 +28,9 @@ include_directories(src)
 add_executable(main
   src/main.cu
   src/fix_cpu.cu
-  src/scan.cu)
+  src/scan.cu
   src/histogram.cu
-  src/apply_map_fix.cu)
+  src/apply_map_fix.cu
+  src/compact.cu)
 target_compile_options(main PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${OpenMP_CXX_FLAGS}>)
 target_link_libraries(main PUBLIC OpenMP::OpenMP_CXX rmm::rmm raft::raft)
