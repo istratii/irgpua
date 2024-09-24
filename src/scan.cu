@@ -87,7 +87,8 @@ static __global__ void _scan(raft::device_span<int> buffer,
     buffer[id] = s_buffer[tid];
 }
 
-static __global__ void _prepare_buffer_for_exclusive_scan(raft::device_span<int> buffer)
+static __global__ void
+_prepare_buffer_for_exclusive_scan(raft::device_span<int> buffer)
 {
   if (threadIdx.x == 0)
     buffer[0] = 0;
@@ -99,7 +100,8 @@ void scan(rmm::device_uvector<int>& buffer, ScanMode mode)
 
   // prepare setup
   rmm::device_buffer raw_setup(sizeof(_Setup), stream);
-  CUDA_CHECK_ERROR(cudaMemsetAsync(raw_setup.data(), 0, raw_setup.size(), stream));
+  CUDA_CHECK_ERROR(
+    cudaMemsetAsync(raw_setup.data(), 0, raw_setup.size(), stream));
   _Setup* setup = static_cast<_Setup*>(raw_setup.data());
 
   CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
@@ -114,8 +116,9 @@ void scan(rmm::device_uvector<int>& buffer, ScanMode mode)
   if (mode == SCAN_EXCLUSIVE)
     _prepare_buffer_for_exclusive_scan<<<1, 1, 0, stream>>>(buffer_span);
 
-  _scan<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK, THREADS_PER_BLOCK,
-          THREADS_PER_BLOCK * sizeof(int), stream>>>(buffer_span, setup_span);
+  _scan<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
+          THREADS_PER_BLOCK, THREADS_PER_BLOCK * sizeof(int), stream>>>(
+    buffer_span, setup_span);
 
   CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
