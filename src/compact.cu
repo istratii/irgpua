@@ -1,53 +1,42 @@
-#include "cuda_tools/cuda_error_checking.cuh"
-
-#include <cuda_runtime.h>
-#include <raft/handle.hpp>
-#include <raft/linalg/scan.cuh>
-#include <rmm/device_uvector.hpp>
-#include <rmm/mr/device/cuda_memory_resource.hpp>
-#include <rmm/mr/device/default_memory_resource.hpp>
+#include "compact.cuh"
 
 #define GARBAGE_VAL -27
 
-__global__ void compact_kernel(int* d_in, int* d_predicate, int size)
+static __global__ void _compact_kernel(raft::device_span<int> buffer,
+                                       raft::device_span<int> d_predicate)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  d_predicate[idx] = (d_in[idx] != GARBAGE_VAL);
+  d_predicate[idx] = (buffer[idx] != GARBAGE_VAL);
 }
 
-__global__ void
-scatter_kernel(int* d_in, int* d_out, int* d_predicate, int size)
+static __global__ void _scatter_kernel(raft::device_span<int> buffer,
+                                       raft::device_span<int> d_predicate)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < size && d_in[idx] != GARBAGE_VAL)
-    {
-      int out_idx = d_predicate[idx];
-      d_out[out_idx] = d_in[idx];
-    }
+  if (idx < buffer.size() && buffer[idx] != GARBAGE_VAL)
+    buffer[d_predicate[idx]] = buffer[idx];
 }
 
-void compact(rmm::device_uvector<int>& d_in,
-             rmm::device_uvector<int>& d_out,
-             raft::handle_t const& handle)
+#define THREADS_PER_BLOCK 1024
+
+void compact(rmm::device_uvector<int>& buffer)
 {
-  cudaStream_t stream = handle.get_stream();
-  std::size_t size = d_in.size();
+  unsigned int size = buffer.size();
+  cudaStream_t stream = buffer.stream();
 
   rmm::device_uvector<int> d_predicate(size, stream);
 
-  int threadsPerBlock = 256;
-  int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
-
-  scatter_kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
-    raft::device_span<int>(d_in.data(), d_in.size()),
-    raft::device_span<int>(d_out.data(), d_out.size()),
-    raft::device_span<int>(d_predicate.data(), d_predicate.size()), size);
+  _compact_kernel<<<(size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
+                    THREADS_PER_BLOCK, 0, stream>>>(
+    raft::device_span<int>(buffer.data(), size),
+    raft::device_span<int>(d_predicate.data(), size));
   CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
-  raft::linalg::inclusive_scan(handle, d_predicate.data(), d_predicate.data(),
-                               size, stream);
+  scan(d_predicate, SCAN_EXCLUSIVE);
 
-  scatter_kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
-    d_in.data(), d_out.data(), d_predicate.data(), size);
+  _scatter_kernel<<<(size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
+                    THREADS_PER_BLOCK, 0, stream>>>(
+    raft::device_span<int>(buffer.data(), size),
+    raft::device_span<int>(d_predicate.data(), size));
   CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 }
