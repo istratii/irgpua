@@ -9,4 +9,4 @@
 #define ASSOC_VAL(idx)                                                         \
   (((idx) % 4 == 0) ? 1 : ((idx) % 4 == 1) ? -5 : ((idx) % 4 == 2) ? 3 : -8)
 
-void map_fix(rmm::device_uvector<int>& image, unsigned int true_size);
+void map_fix(rmm::device_uvector<int>& buffer);
