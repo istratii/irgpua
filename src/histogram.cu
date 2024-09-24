@@ -79,7 +79,7 @@ void equalize_histogram(rmm::device_uvector<int>& buffer,
 
   scan(hist, SCAN_INCLUSIVE);
 
-  _compute_first_non_zero<<<1, 1, 0, buffer.stream()>>>(
+  _compute_first_non_zero<<<1, 1, 0, stream>>>(
     raft::device_span<int>(hist.data(), hist.size()));
 
   CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
