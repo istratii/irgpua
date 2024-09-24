@@ -1,9 +1,21 @@
-#define ASSOC_VAL(idx)                                                         \
-  (((idx) % 4 == 0) ? 1 : ((idx) % 4 == 1) ? -5 : ((idx) % 4 == 2) ? 3 : -8)
 
-__global__ void map_kernel(int* d_buffer, int size)
+
+#include "apply_map_fix.cuh"
+
+static __global__ void _map_fix(raft::device_span<int> d_buffer)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < size)
+  if (idx < d_buffer.size())
     d_buffer[idx] += ASSOC_VAL(idx);
+}
+
+#define THREADS_PER_BLOCK 1024
+
+void map_fix(rmm::device_uvector<int>& buffer, unsigned int true_size)
+{
+  _map_fix<<<(true_size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
+             THREADS_PER_BLOCK, 0, buffer.stream()>>>(
+    raft::device_span<int>(buffer.data(), true_size));
+
+  CUDA_CHECK_ERROR(cudaStreamSynchronize(buffer.stream()));
 }
