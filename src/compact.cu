@@ -2,16 +2,16 @@
 
 #define GARBAGE_VAL -27
 
-static __global__ void _compact_kernel(raft::device_span<int> buffer,
-                                       raft::device_span<int> d_predicate)
+static __global__ void _compact(raft::device_span<int> buffer,
+                                raft::device_span<int> d_predicate)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < buffer.size())
     d_predicate[idx] = buffer[idx] != GARBAGE_VAL;
 }
 
-static __global__ void _scatter_kernel(raft::device_span<int> buffer,
-                                       raft::device_span<int> d_predicate)
+static __global__ void _scatter(raft::device_span<int> buffer,
+                                raft::device_span<int> d_predicate)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < buffer.size() && buffer[idx] != GARBAGE_VAL)
@@ -20,26 +20,19 @@ static __global__ void _scatter_kernel(raft::device_span<int> buffer,
 
 void compact(rmm::device_uvector<int>& buffer)
 {
-  unsigned int size = buffer.size();
-  cudaStream_t stream = buffer.stream();
-
-  rmm::device_uvector<int> d_predicate(size, stream);
-
 #define THREADS_PER_BLOCK 1024
 
-  _compact_kernel<<<(size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
-                    THREADS_PER_BLOCK, 0, stream>>>(
-    raft::device_span<int>(buffer.data(), size),
-    raft::device_span<int>(d_predicate.data(), size));
+  const unsigned int size = buffer.size();
+  const unsigned int grid_size = (size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
+  const unsigned int block_size = THREADS_PER_BLOCK;
+  cudaStream_t stream = buffer.stream();
+  rmm::device_uvector<int> pred(size, stream);
+  raft::device_span<int> buffer_span(buffer.data(), size);
+  raft::device_span<int> pred_span(pred.data(), size);
 
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
-
-  scan(d_predicate, SCAN_EXCLUSIVE);
-
-  _scatter_kernel<<<(size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
-                    THREADS_PER_BLOCK, 0, stream>>>(
-    raft::device_span<int>(buffer.data(), size),
-    raft::device_span<int>(d_predicate.data(), size));
+  _compact<<<grid_size, block_size, 0, stream>>>(buffer_span, pred_span);
+  scan(pred, SCAN_EXCLUSIVE);
+  _scatter<<<grid_size, block_size, 0, stream>>>(buffer_span, pred_span);
 
   CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
