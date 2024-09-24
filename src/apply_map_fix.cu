@@ -9,13 +9,15 @@ static __global__ void _map_fix(raft::device_span<int> d_buffer)
     d_buffer[idx] += ASSOC_VAL(idx);
 }
 
+void map_fix(rmm::device_uvector<int>& buffer)
+{
 #define THREADS_PER_BLOCK 1024
 
-void map_fix(rmm::device_uvector<int>& buffer, unsigned int true_size)
-{
-  _map_fix<<<(true_size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
+  _map_fix<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
              THREADS_PER_BLOCK, 0, buffer.stream()>>>(
-    raft::device_span<int>(buffer.data(), true_size));
+    raft::device_span<int>(buffer.data(), buffer.size()));
 
   CUDA_CHECK_ERROR(cudaStreamSynchronize(buffer.stream()));
+
+#undef THREADS_PER_BLOCK
 }

@@ -2,7 +2,6 @@
 #include "scan.cuh"
 
 #define MAX_BLOCKS 4096
-#define THREADS_PER_BLOCK 1024
 
 #define X 0
 #define A 1
@@ -92,20 +91,27 @@ static __global__ void _scan(raft::device_span<int> buffer)
 
 void scan(rmm::device_uvector<int>& buffer, ScanMode mode)
 {
+  cudaStream_t stream = buffer.stream();
+
   const int tmp = 0;
   CUDA_CHECK_ERROR(
     cudaMemcpyToSymbol(counter, &tmp, sizeof(int), 0, cudaMemcpyHostToDevice));
 
+#define THREADS_PER_BLOCK 1024
+
   _init_descriptors<<<(MAX_BLOCKS + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
-                      THREADS_PER_BLOCK, 0, buffer.stream()>>>();
+                      THREADS_PER_BLOCK, 0, stream>>>();
+
+  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
   if (mode == SCAN_EXCLUSIVE)
     CUDA_CHECK_ERROR(cudaMemset(buffer.data(), 0, sizeof(int)));
 
   _scan<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
-          THREADS_PER_BLOCK, THREADS_PER_BLOCK * sizeof(int),
-          buffer.stream()>>>(
+          THREADS_PER_BLOCK, THREADS_PER_BLOCK * sizeof(int), stream>>>(
     raft::device_span<int>(buffer.data(), buffer.size()));
 
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(buffer.stream()));
+  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
+
+#undef THREADS_PER_BLOCK
 }

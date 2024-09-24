@@ -1,13 +1,14 @@
-#include "fix_cpu.cuh"
-#include "image.hh"
-#include "pipeline.hh"
-
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <numeric>
 #include <sstream>
 #include <vector>
+
+#include "fix_cpu.cuh"
+#include "fix_gpu.cuh"
+#include "image.hh"
+#include "pipeline.hh"
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
@@ -37,7 +38,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
   std::cout << "Done, starting compute" << std::endl;
 
-#pragma omp parallel for
+  // #pragma omp parallel for
   for (int i = 0; i < nb_images; ++i)
     {
       // TODO : make it GPU compatible (aka faster)
@@ -48,7 +49,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
       // You must get the image from the pipeline as they arrive and launch computations right away
       // There are still ways to speeds this process of course
       images[i] = pipeline.get_image(i);
-      fix_image_cpu(images[i]);
+      fix_image_gpu(images[i]);
+      // fix_image_cpu(images[i]);
     }
 
   std::cout << "Done with compute, starting stats" << std::endl;
