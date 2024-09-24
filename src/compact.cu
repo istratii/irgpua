@@ -1,3 +1,5 @@
+#include "cuda_tools/cuda_error_checking.cuh"
+
 #include <cuda_runtime.h>
 #include <raft/handle.hpp>
 #include <raft/linalg/scan.cuh>
@@ -10,7 +12,7 @@
 __global__ void compact_kernel(int* d_in, int* d_predicate, int size)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  d_predicate[idx] = (d_in[idx] != GARBAGE_VAL)
+  d_predicate[idx] = (d_in[idx] != GARBAGE_VAL);
 }
 
 __global__ void
@@ -40,12 +42,12 @@ void compact(rmm::device_uvector<int>& d_in,
     raft::device_span<int>(d_in.data(), d_in.size()),
     raft::device_span<int>(d_out.data(), d_out.size()),
     raft::device_span<int>(d_predicate.data(), d_predicate.size()), size);
-  cudaStreamSynchronize(stream);
+  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
   raft::linalg::inclusive_scan(handle, d_predicate.data(), d_predicate.data(),
                                size, stream);
 
   scatter_kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
     d_in.data(), d_out.data(), d_predicate.data(), size);
-  cudaStreamSynchronize(stream);
+  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 }
