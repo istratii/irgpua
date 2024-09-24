@@ -28,12 +28,13 @@ rmm::device_buffer histogram(rmm::device_uvector<int>& buffer)
 {
   constexpr unsigned int hist_bytes_size = 256 * sizeof(int);
   rmm::device_buffer hist(hist_bytes_size, buffer.stream());
+
   CUDA_CHECK_ERROR(cudaMemset(hist.data(), 0, hist_bytes_size));
 
   _histogram<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
                THREADS_PER_BLOCK, hist_bytes_size, buffer.stream()>>>(
     raft::device_span<int>(buffer.data(), buffer.size()),
-    raft::device_span<int>(static_cast<int*>(hist.data()), buffer.size()));
+    raft::device_span<int>(static_cast<int*>(hist.data()), 256));
 
   CUDA_CHECK_ERROR(cudaStreamSynchronize(buffer.stream()));
 
