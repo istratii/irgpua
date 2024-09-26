@@ -57,18 +57,17 @@ static __global__ void _equalize_histogram(raft::device_span<int> buffer,
                                            raft::device_span<int> hist,
                                            raft::device_span<int> cdf_min)
 {
-  __shared__ int s_cdf_min;
   const unsigned int tid = threadIdx.x;
   const unsigned int id = tid + blockIdx.x * blockDim.x;
   const unsigned int N = buffer.size();
 
-  if (tid == 0)
-    s_cdf_min = cdf_min[0];
-  __syncthreads();
-
   if (id < N)
-    buffer[id] = roundf((hist[buffer[id]] - s_cdf_min)
-                        / static_cast<float>(N - s_cdf_min + 1e-9f) * 255.0f);
+    {
+      float tmp = (hist[buffer[id]] - cdf_min[0])
+        / static_cast<float>(N - cdf_min[0] + 1e-9f);
+      tmp = roundf(tmp * 255.0f);
+      buffer[id] = tmp;
+    }
 }
 
 void equalize_histogram(rmm::device_uvector<int>& buffer,
