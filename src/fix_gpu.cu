@@ -8,7 +8,8 @@ void fix_image_gpu(Image& to_fix)
   cudaStream_t stream = handle.get_stream();
 
   rmm::device_uvector<int> buffer(true_size, stream);
-  CUDA_CHECK_ERROR(cudaMemcpyAsync(buffer.data(), to_fix.buffer, true_size * sizeof(int),
+  CUDA_CHECK_ERROR(cudaMemcpyAsync(buffer.data(), to_fix.buffer,
+                                   true_size * sizeof(int),
                                    cudaMemcpyHostToDevice, stream));
 
   // #1 Compact
@@ -18,10 +19,13 @@ void fix_image_gpu(Image& to_fix)
   // #2 Apply map to fix pixels
   map_fix(buffer);
 
-  // // #3 Histogram equalization
+  // #3 Histogram equalization
   rmm::device_uvector<int> hist = histogram(buffer);
   equalize_histogram(buffer, hist);
 
-  CUDA_CHECK_ERROR(cudaMemcpyAsync(to_fix.buffer, buffer.data(), image_size * sizeof(int),
+  CUDA_CHECK_ERROR(cudaMemcpyAsync(to_fix.buffer, buffer.data(),
+                                   image_size * sizeof(int),
                                    cudaMemcpyDeviceToHost, stream));
+
+  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 }
