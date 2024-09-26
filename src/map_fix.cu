@@ -1,6 +1,6 @@
 
 
-#include "apply_map_fix.cuh"
+#include "map_fix.cuh"
 
 static __global__ void _map_fix(raft::device_span<int> d_buffer)
 {
