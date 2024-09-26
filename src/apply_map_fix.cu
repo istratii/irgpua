@@ -17,7 +17,5 @@ void map_fix(rmm::device_uvector<int>& buffer)
              THREADS_PER_BLOCK, 0, buffer.stream()>>>(
     raft::device_span<int>(buffer.data(), buffer.size()));
 
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(buffer.stream()));
-
 #undef THREADS_PER_BLOCK
 }
