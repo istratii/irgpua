@@ -78,7 +78,6 @@ void equalize_histogram(rmm::device_uvector<int>& buffer,
   raft::device_span<int> hist_span(hist.data(), hist.size());
 
   scan(hist, SCAN_INCLUSIVE);
-
   _compute_first_non_zero<<<1, 1, 0, stream>>>(hist_span);
 
 #define THREADS_PER_BLOCK 1024
@@ -87,8 +86,6 @@ void equalize_histogram(rmm::device_uvector<int>& buffer,
                           / THREADS_PER_BLOCK,
                         THREADS_PER_BLOCK, 0, stream>>>(
     raft::device_span<int>(buffer.data(), buffer.size()), hist_span);
-
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
 #undef THREADS_PER_BLOCK
 }
