@@ -43,19 +43,19 @@ rmm::device_uvector<int> histogram(rmm::device_uvector<int>& buffer)
   return hist;
 }
 
-__device__ int cdf_min = 0;
-
-static __global__ void _compute_first_non_zero(raft::device_span<int> hist)
+static __global__ void _compute_first_non_zero(raft::device_span<int> hist,
+                                               raft::device_span<int> cdf_min)
 {
   const unsigned int N = hist.size();
   int ii = 0;
   while (ii < N && !hist[ii])
     ++ii;
-  cdf_min = ii < N ? hist[ii] : -1;
+  cdf_min[0] = ii < N ? hist[ii] : -1;
 }
 
 static __global__ void _equalize_histogram(raft::device_span<int> buffer,
-                                           raft::device_span<int> hist)
+                                           raft::device_span<int> hist,
+                                           raft::device_span<int> cdf_min)
 {
   __shared__ int s_cdf_min;
   const unsigned int tid = threadIdx.x;
@@ -63,7 +63,7 @@ static __global__ void _equalize_histogram(raft::device_span<int> buffer,
   const unsigned int N = buffer.size();
 
   if (tid == 0)
-    s_cdf_min = cdf_min;
+    s_cdf_min = cdf_min[0];
   __syncthreads();
 
   if (id < N)
@@ -75,17 +75,20 @@ void equalize_histogram(rmm::device_uvector<int>& buffer,
                         rmm::device_uvector<int>& hist)
 {
   cudaStream_t stream = buffer.stream();
+  rmm::device_scalar<int> cdf_min(0, stream);
+  raft::device_span<int> cdf_min_span(cdf_min.data(), cdf_min.size());
   raft::device_span<int> hist_span(hist.data(), hist.size());
 
   scan(hist, SCAN_INCLUSIVE);
-  _compute_first_non_zero<<<1, 1, 0, stream>>>(hist_span);
+  _compute_first_non_zero<<<1, 1, 0, stream>>>(hist_span, cdf_min_span);
 
 #define THREADS_PER_BLOCK 1024
 
   _equalize_histogram<<<(buffer.size() + THREADS_PER_BLOCK - 1)
                           / THREADS_PER_BLOCK,
                         THREADS_PER_BLOCK, 0, stream>>>(
-    raft::device_span<int>(buffer.data(), buffer.size()), hist_span);
+    raft::device_span<int>(buffer.data(), buffer.size()), hist_span,
+    cdf_min_span);
 
 #undef THREADS_PER_BLOCK
 }
