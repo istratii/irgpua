@@ -9,6 +9,7 @@
 #include "fix_gpu.cuh"
 #include "image.hh"
 #include "pipeline.hh"
+#include "cuda_tools/cuda_error_checking.cuh"
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
@@ -62,14 +63,53 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 // TODO : make it GPU compatible (aka faster)
 // You can use multiple CPU threads for your GPU version using openmp or not
 // Up to you :)
-#pragma omp parallel for
-  for (int i = 0; i < nb_images; ++i)
-    {
-      auto& image = images[i];
-      const int image_size = image.width * image.height;
-      image.to_sort.total =
-        std::reduce(image.buffer, image.buffer + image_size, 0);
-    }
+  #pragma omp parallel for
+for (int i = 0; i < nb_images; ++i)
+{
+    // Récupérer l'image
+    auto& image = images[i];
+    const size_t image_size = image.width * image.height;
+
+    // Créer un flux CUDA spécifique au thread
+    cudaStream_t stream;
+    CUDA_CHECK_ERROR(cudaStreamCreate(&stream));
+
+    rmm::cuda_stream_view rmm_stream(stream);
+
+    // Allouer de la mémoire sur le GPU avec RMM
+    rmm::device_uvector<int> d_image(image_size, rmm_stream);
+
+    // Copier l'image sur le GPU (asynchrone)
+    CUDA_CHECK_ERROR(cudaMemcpyAsync(
+        d_image.data(),
+        image.buffer,
+        image_size * sizeof(int),
+        cudaMemcpyHostToDevice,
+        rmm_stream.value()));
+
+    // Synchroniser le flux pour s'assurer que la copie est terminée
+    rmm_stream.synchronize();
+
+    // Créer un device_ptr Thrust pour les opérations de réduction
+    thrust::device_ptr<int> dev_ptr = thrust::device_pointer_cast(d_image.data());
+
+    // Calculer le total sur le GPU avec Thrust
+    int total = thrust::reduce(
+        thrust::cuda::par.on(rmm_stream.value()),
+        dev_ptr,
+        dev_ptr + image_size,
+        0,
+        thrust::plus<int>());
+
+    // Synchroniser le flux pour s'assurer que la réduction est terminée
+    rmm_stream.synchronize();
+
+    // Stocker le total
+    image.to_sort.total = total;
+
+    // Détruire le flux CUDA
+    CUDA_CHECK_ERROR(cudaStreamDestroy(stream));
+}
 
   // - All totals are known, sort images accordingly (OPTIONAL)
   // Moving the actual images is too expensive, sort image indices instead
