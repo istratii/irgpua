@@ -23,7 +23,8 @@ void compact(rmm::device_uvector<int>& buffer)
 #define THREADS_PER_BLOCK 1024
 
   const unsigned int size = buffer.size();
-  const unsigned int grid_size = (size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
+  const unsigned int grid_size =
+    (size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
   const unsigned int block_size = THREADS_PER_BLOCK;
   cudaStream_t stream = buffer.stream();
   rmm::device_uvector<int> pred(size, stream);
