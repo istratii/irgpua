@@ -36,7 +36,7 @@ rmm::device_uvector<int> histogram(rmm::device_uvector<int>& buffer)
   _histogram<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
                THREADS_PER_BLOCK, hist_bytes_size, stream>>>(
     raft::device_span<int>(buffer.data(), buffer.size()),
-    raft::device_span<int>(static_cast<int*>(hist.data()), hist.size()));
+    raft::device_span<int>(hist.data(), hist.size()));
 
   CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
