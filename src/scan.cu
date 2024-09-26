@@ -104,12 +104,8 @@ void scan(rmm::device_uvector<int>& buffer, ScanMode mode)
     cudaMemsetAsync(raw_setup.data(), 0, raw_setup.size(), stream));
   _Setup* setup = static_cast<_Setup*>(raw_setup.data());
 
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
-
   raft::device_span<int> buffer_span(buffer.data(), buffer.size());
   raft::device_span<_Setup> setup_span(setup, 1);
-
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
 #define THREADS_PER_BLOCK 1024
 
@@ -119,8 +115,6 @@ void scan(rmm::device_uvector<int>& buffer, ScanMode mode)
   _scan<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
           THREADS_PER_BLOCK, THREADS_PER_BLOCK * sizeof(int), stream>>>(
     buffer_span, setup_span);
-
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
 #undef THREADS_PER_BLOCK
 }
