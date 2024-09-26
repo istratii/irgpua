@@ -35,7 +35,5 @@ void compact(rmm::device_uvector<int>& buffer)
   scan(pred, SCAN_EXCLUSIVE);
   _scatter<<<grid_size, block_size, 0, stream>>>(buffer_span, pred_span);
 
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
-
 #undef THREADS_PER_BLOCK
 }
