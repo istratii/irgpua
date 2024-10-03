@@ -7,30 +7,28 @@
 #define A 1
 #define P 2
 
-__device__ int counter = 0;
-__device__ int global[MAX_BLOCKS];
-__device__ int local[MAX_BLOCKS];
-__device__ cuda::atomic<int, cuda::thread_scope_device> states[MAX_BLOCKS];
-
-static __global__ void _init_descriptors()
+struct _Setup
 {
-  const unsigned int id = blockIdx.x * blockDim.x + threadIdx.x;
-  global[id] = 0;
-  local[id] = 0;
-  states[id] = X;
-}
+  int next_block_id;
+  int global_sums[4096];
+  int local_sums[4096];
+  cuda::atomic<int, cuda::thread_scope_device> states[4096];
+};
 
-static __global__ void _scan(raft::device_span<int> buffer)
+static __global__ void _scan(raft::device_span<int> buffer,
+                             raft::device_span<_Setup> setup)
 {
   __shared__ unsigned int bid;
   __shared__ unsigned int state;
   extern __shared__ int s_buffer[];
 
   const unsigned int tid = threadIdx.x;
+  _Setup* sptr = setup.data();
 
   // replace blockIdx.x to avoid dead locks
+  // first come first served
   if (tid == 0)
-    bid = atomicAdd(&counter, 1);
+    bid = atomicAdd(&sptr->next_block_id, 1);
   __syncthreads();
 
   const unsigned int id = bid * blockDim.x + tid;
@@ -53,32 +51,32 @@ static __global__ void _scan(raft::device_span<int> buffer)
 
   if (tid == blockDim.x - 1)
     {
-      local[bid] = s_buffer[tid];
+      sptr->local_sums[bid] = s_buffer[tid];
       if (bid == 0)
-        global[bid] = local[bid];
-      states[bid].store(bid ? A : P, cuda::memory_order_seq_cst);
+        sptr->global_sums[bid] = sptr->local_sums[bid];
+      sptr->states[bid].store(bid ? A : P, cuda::memory_order_seq_cst);
     }
   __syncthreads();
 
   for (int ii = bid - 1; ii >= 0; --ii)
     {
       if (tid == 0)
-        while ((state = states[ii].load(cuda::memory_order_seq_cst)) == X)
+        while ((state = sptr->states[ii].load(cuda::memory_order_seq_cst)) == X)
           ;
       __syncthreads();
 
       if (state == A)
         {
-          s_buffer[tid] += local[ii];
+          s_buffer[tid] += sptr->local_sums[ii];
           __syncthreads();
         }
       else // P
         {
-          s_buffer[tid] += global[ii];
+          s_buffer[tid] += sptr->global_sums[ii];
           if (tid == blockDim.x - 1)
             {
-              global[bid] = s_buffer[tid];
-              states[bid].store(P, cuda::memory_order_seq_cst);
+              sptr->global_sums[bid] = s_buffer[tid];
+              sptr->states[bid].store(P, cuda::memory_order_seq_cst);
             }
           __syncthreads();
           break;
@@ -89,29 +87,34 @@ static __global__ void _scan(raft::device_span<int> buffer)
     buffer[id] = s_buffer[tid];
 }
 
+static __global__ void
+_prepare_buffer_for_exclusive_scan(raft::device_span<int> buffer)
+{
+  if (threadIdx.x == 0)
+    buffer[0] = 0;
+}
+
 void scan(rmm::device_uvector<int>& buffer, ScanMode mode)
 {
   cudaStream_t stream = buffer.stream();
 
-  const int tmp = 0;
+  // prepare setup
+  rmm::device_buffer raw_setup(sizeof(_Setup), stream);
   CUDA_CHECK_ERROR(
-    cudaMemcpyToSymbol(counter, &tmp, sizeof(int), 0, cudaMemcpyHostToDevice));
+    cudaMemsetAsync(raw_setup.data(), 0, raw_setup.size(), stream));
+  _Setup* setup = static_cast<_Setup*>(raw_setup.data());
+
+  raft::device_span<int> buffer_span(buffer.data(), buffer.size());
+  raft::device_span<_Setup> setup_span(setup, 1);
 
 #define THREADS_PER_BLOCK 1024
 
-  _init_descriptors<<<(MAX_BLOCKS + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
-                      THREADS_PER_BLOCK, 0, stream>>>();
-
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
-
   if (mode == SCAN_EXCLUSIVE)
-    CUDA_CHECK_ERROR(cudaMemset(buffer.data(), 0, sizeof(int)));
+    _prepare_buffer_for_exclusive_scan<<<1, 1, 0, stream>>>(buffer_span);
 
   _scan<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
           THREADS_PER_BLOCK, THREADS_PER_BLOCK * sizeof(int), stream>>>(
-    raft::device_span<int>(buffer.data(), buffer.size()));
-
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
+    buffer_span, setup_span);
 
 #undef THREADS_PER_BLOCK
 }

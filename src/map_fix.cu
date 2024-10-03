@@ -1,6 +1,6 @@
 
 
-#include "apply_map_fix.cuh"
+#include "map_fix.cuh"
 
 static __global__ void _map_fix(raft::device_span<int> d_buffer)
 {
@@ -16,8 +16,6 @@ void map_fix(rmm::device_uvector<int>& buffer)
   _map_fix<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
              THREADS_PER_BLOCK, 0, buffer.stream()>>>(
     raft::device_span<int>(buffer.data(), buffer.size()));
-
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(buffer.stream()));
 
 #undef THREADS_PER_BLOCK
 }
