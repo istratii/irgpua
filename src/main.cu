@@ -33,6 +33,16 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
   const int nb_images = pipeline.images.size();
   std::vector<Image> images(nb_images);
+  // Créer une piscine de mémoire CUDA
+    cudaMemPool_t memPool;
+    cudaMemPoolProps poolProps = { cudaMemAllocationTypePinned, cudaMemHandleTypeNone, cudaMemLocationTypeDevice };
+    CUDA_CHECK_ERROR(cudaMemPoolCreate(&memPool, &poolProps));
+
+    // Associer la piscine de mémoire au GPU par défaut
+    CUDA_CHECK_ERROR(cudaDeviceSetMemPool(0, memPool));
+
+    // Allocation d'un tableau de pointeurs pour gérer les buffers GPU
+    std::vector<int*> d_buffers(nb_images);
 
   // - One CPU thread is launched for each image
 
@@ -48,12 +58,31 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
       // You *must not* copy all the images and only then do the computations
       // You must get the image from the pipeline as they arrive and launch computations right away
       // There are still ways to speeds this process of course
-      images[i] = pipeline.get_image(i);
-      fix_image_gpu(images[i]);
+      //images[i] = pipeline.get_image(i);
+      //fix_image_gpu(images[i]);
       // fix_image_cpu(images[i]);
+      images[i] = pipeline.get_image(i);
+        const size_t image_size = images[i].width * images[i].height * sizeof(int);
+
+        // Allocation de mémoire depuis la piscine pour chaque image
+        CUDA_CHECK_ERROR(cudaMallocFromPoolAsync(reinterpret_cast<void**>(&d_buffers[i]), image_size, memPool, 0));
+
+        // Copier l'image sur le GPU (synchronisé avec le stream par défaut)
+        CUDA_CHECK_ERROR(cudaMemcpy(d_buffers[i], images[i].buffer, image_size, cudaMemcpyHostToDevice));
+
+        // Appel de la fonction GPU avec l'image CPU
+        // La fonction utilisera implicitement d_buffers[i]
+        fix_image_gpu(images[i]);
+
+        // Copier le résultat de nouveau sur le CPU
+        CUDA_CHECK_ERROR(cudaMemcpy(images[i].buffer, d_buffers[i], image_size, cudaMemcpyDeviceToHost));
+
+        // Libérer la mémoire pour cette image
+        CUDA_CHECK_ERROR(cudaFreeAsync(d_buffers[i], 0));
     }
 
   std::cout << "Done with compute, starting stats" << std::endl;
+  CUDA_CHECK_ERROR(cudaMemPoolDestroy(memPool));
 
 // -- All images are now fixed : compute stats (total then sort)
 
