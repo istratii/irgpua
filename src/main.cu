@@ -83,6 +83,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
                 [n = 0, images]() mutable { return images[n++].to_sort; });
 
   // TODO OPTIONAL : make it GPU compatible (aka faster)
+  for (int i = 0; i < nb_images; i++)
+  {
+	  to_sort[i] = images[i].to_sort;
+  }
   std::sort(to_sort.begin(), to_sort.end(),
             [](ToSort a, ToSort b) { return a.total < b.total; });
 
