@@ -1,8 +1,6 @@
 
 #include "memory_pool.cuh"
 
-#define ALIGN32(N) ((N + 31) & ~31)
-
 void init_memory_pool(size_t bytes)
 {
   bytes = ALIGN32(bytes);
