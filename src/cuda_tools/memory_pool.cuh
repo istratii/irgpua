@@ -7,3 +7,4 @@
 #define ALIGN32(N) ((N + 31) & ~31)
 
 void init_memory_pool(size_t bytes);
+void free_memory_pool();

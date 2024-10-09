@@ -20,3 +20,10 @@ void init_memory_pool(size_t bytes)
 
   rmm::mr::set_current_device_resource(pool_resource.get());
 }
+
+void free_memory_pool()
+{
+  rmm::mr::set_current_device_resource(nullptr);
+  pool_resource.reset();
+  cuda_memory_resource.reset();
+}
