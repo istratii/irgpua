@@ -5,10 +5,13 @@
 #include <sstream>
 #include <vector>
 
+#include "cuda_tools/memory_pool.cuh"
 #include "fix_cpu.cuh"
 #include "fix_gpu.cuh"
 #include "image.hh"
 #include "pipeline.hh"
+
+#define MEMORY_POOL_SIZE (1 << 30) // one gigabyte
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
@@ -24,6 +27,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
   for (const auto& dir_entry : recursive_directory_iterator(
          "/afs/cri.epita.fr/resources/teach/IRGPUA/images"))
     filepaths.emplace_back(dir_entry.path());
+
+  init_memory_pool(MEMORY_POOL_SIZE);
 
   // - Init pipeline object
 
@@ -105,6 +110,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
   // TODO : Don't forget to update this if you change allocation style
   for (int i = 0; i < nb_images; ++i)
     free(images[i].buffer);
+
+  free_memory_pool();
 
   return 0;
 }
