@@ -25,7 +25,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     std::filesystem::recursive_directory_iterator;
   std::vector<std::string> filepaths;
   for (const auto& dir_entry : recursive_directory_iterator(
-         "/afs/cri.epita.fr/resources/teach/IRGPUA/images"))
+         "/home/ucin/projects/epita/s9/irgpua/irgpua/images"))
     filepaths.emplace_back(dir_entry.path());
 
   init_memory_pool(MEMORY_POOL_SIZE);
@@ -46,7 +46,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 #pragma omp parallel for
   for (int i = 0; i < nb_images; ++i)
     {
-      // TODO : make it GPU compatible (aka faster)
+      // DONE : make it GPU compatible (aka faster)
       // You will need to copy images one by one on the GPU
       // You can store the images the way you want on the GPU
       // But you should treat the pipeline as a pipeline :
@@ -54,7 +54,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
       // You must get the image from the pipeline as they arrive and launch computations right away
       // There are still ways to speeds this process of course
       images[i] = pipeline.get_image(i);
-      fix_image_gpu(images[i]);
       // fix_image_cpu(images[i]);
     }
 

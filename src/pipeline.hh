@@ -6,6 +6,8 @@
 #include <regex>
 #include <stack>
 #include <string>
+#include <raft/core/handle.hpp>
+#include "fix_gpu.cuh"
 
 static std::string get_number(const std::string& str)
 {
@@ -26,16 +28,21 @@ struct Pipeline
 {
   Pipeline(const std::vector<std::string>& filepaths)
   {
-    images = std::vector<Image>(filepaths.size());
+    const unsigned int N = filepaths.size();
+    images = std::vector<Image>(N);
+    handlers = std::vector<raft::handle_t>(N);
+
 #pragma omp parallel for
-    for (std::size_t i = 0; i < filepaths.size(); ++i)
+    for (std::size_t ii = 0; ii < N; ++ii)
       {
-        const int image_id = std::stoi(get_number(filepaths[i]));
-        images[i] = Image(filepaths[i], image_id);
+        const int image_id = std::stoi(get_number(filepaths[ii]));
+        images[ii] = Image(filepaths[ii], image_id);
+        fix_image_gpu(images[ii], handlers[ii].get_stream());
       }
   }
 
   Image&& get_image(int i) { return std::move(images[i]); }
 
   std::vector<Image> images;
+  std::vector<raft::handle_t> handlers;
 };

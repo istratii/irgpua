@@ -11,4 +11,4 @@
 #include "map_fix.cuh"
 #include "scan.cuh"
 
-void fix_image_gpu(Image& to_fix);
+void fix_image_gpu(Image& to_fix, cudaStream_t stream);
