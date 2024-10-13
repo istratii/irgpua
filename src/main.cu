@@ -11,7 +11,8 @@
 #include "image.hh"
 #include "pipeline.hh"
 
-#define MEMORY_POOL_SIZE (1 << 30) // one gigabyte
+#define HOST_PINNED_MEMORY_POOL_SIZE (192 * (1 << 20)) // 192 mega bytes
+#define DEVICE_MEMORY_POOL_SIZE (1 << 30)              // one gigabyte
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
@@ -28,7 +29,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
          "/home/ucin/projects/epita/s9/irgpua/irgpua/images"))
     filepaths.emplace_back(dir_entry.path());
 
-  init_memory_pool(MEMORY_POOL_SIZE);
+  init_host_pinned_memory_pool(HOST_PINNED_MEMORY_POOL_SIZE);
+  init_device_memory_pool(DEVICE_MEMORY_POOL_SIZE);
 
   // - Init pipeline object
 
@@ -106,11 +108,13 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
   std::cout << "Done, the internet is safe now :)" << std::endl;
 
   // Cleaning
-  // TODO : Don't forget to update this if you change allocation style
-  for (int i = 0; i < nb_images; ++i)
-    free(images[i].buffer);
+  // DONE : Don't forget to update this if you change allocation style
+  for (int ii = 0; ii < nb_images; ++ii)
+    free_host_pinned_memory(images[ii].buffer, images[ii].size() * sizeof(int));
+  // free(images[i].buffer);
 
-  free_memory_pool();
+  free_host_pinned_memory_pool();
+  free_device_memory_pool();
 
   return 0;
 }
