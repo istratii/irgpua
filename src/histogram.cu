@@ -43,22 +43,20 @@ static __global__ void _equalize_histogram(raft::device_span<int> buffer,
 
   if (id < N)
     {
-      float tmp = (hist[buffer[id]] - cdf_min[0])
-        / static_cast<float>(N - cdf_min[0] + 1e-9f);
-      tmp = roundf(tmp * 255.0f);
+      float tmp = hist[buffer[id]] - cdf_min[0];
+      tmp /= static_cast<float>(N - cdf_min[0] + 1e-9f);
+      tmp *= 255.0f;
+      tmp = roundf(tmp);
       buffer[id] = tmp;
     }
 }
 
 void equalize_histogram(rmm::device_uvector<int>& buffer)
 {
-#define THREADS_PER_BLOCK 1024
-
   cudaStream_t stream = buffer.stream();
   raft::device_span<int> buffer_span(buffer.data(), buffer.size());
-  const unsigned int grid_size =
-    (buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-  const unsigned int block_size = THREADS_PER_BLOCK;
+  constexpr unsigned int block_size = 1024;
+  const unsigned int grid_size = (buffer.size() + block_size - 1) / block_size;
 
   // compute histogram
   rmm::device_uvector<int> histogram(256, stream);
@@ -77,6 +75,4 @@ void equalize_histogram(rmm::device_uvector<int>& buffer)
   _compute_first_non_zero<<<1, 1, 0, stream>>>(histogram_span, cdf_min_span);
   _equalize_histogram<<<grid_size, block_size, 0, stream>>>(
     buffer_span, histogram_span, cdf_min_span);
-
-#undef THREADS_PER_BLOCK
 }
