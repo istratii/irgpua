@@ -59,21 +59,21 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
   std::cout << "Done with compute, starting stats" << std::endl;
 
-// -- All images are now fixed : compute stats (total then sort)
+  // -- All images are now fixed : compute stats (total then sort)
 
-// - First compute the total of each image
+  // - First compute the total of each image
 
-// TODO : make it GPU compatible (aka faster)
-// You can use multiple CPU threads for your GPU version using openmp or not
-// Up to you :)
-#pragma omp parallel for
-  for (int i = 0; i < nb_images; ++i)
-    {
-      auto& image = images[i];
-      const int image_size = image.width * image.height;
-      image.to_sort.total =
-        std::reduce(image.buffer, image.buffer + image_size, 0);
-    }
+  // DONE : make it GPU compatible (aka faster)
+  // You can use multiple CPU threads for your GPU version using openmp or not
+  // Up to you :)
+  // #pragma omp parallel for
+  //   for (int i = 0; i < nb_images; ++i)
+  //     {
+  //       auto& image = images[i];
+  //       const int image_size = image.width * image.height;
+  //       image.to_sort.total =
+  //         std::reduce(image.buffer, image.buffer + image_size, 0);
+  //     }
 
   // - All totals are known, sort images accordingly (OPTIONAL)
   // Moving the actual images is too expensive, sort image indices instead

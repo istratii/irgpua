@@ -31,6 +31,15 @@ void fix_image_gpu(Image& to_fix, cudaStream_t stream)
   // Apply the map transformation of the histogram equalization
   equalize_histogram(buffer);
 
+  // compute the total of each image
+  // doing this here because the images are still on device memory
+  rmm::device_scalar<int> total(0, stream);
+  reduce(buffer, total);
+
+  // copy total pixel sum to host, stream aware
+  cudaMemcpyAsync(&to_fix.to_sort.total, total.data(), sizeof(int),
+                  cudaMemcpyDeviceToHost, stream);
+
   // copy image to host back from device, stream aware
   cudaMemcpyAsync(to_fix.buffer, buffer.data(), image_size * sizeof(int),
                   cudaMemcpyDeviceToHost, stream);
