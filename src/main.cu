@@ -26,7 +26,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
     std::filesystem::recursive_directory_iterator;
   std::vector<std::string> filepaths;
   for (const auto& dir_entry : recursive_directory_iterator(
-         "/home/ucin/projects/epita/s9/irgpua/irgpua/images"))
+         "/afs/cri.epita.fr/resources/teach/IRGPUA/images"))
     filepaths.emplace_back(dir_entry.path());
 
   init_host_pinned_memory_pool(HOST_PINNED_MEMORY_POOL_SIZE);
