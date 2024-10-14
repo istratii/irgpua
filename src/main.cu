@@ -11,7 +11,8 @@
 #include "image.hh"
 #include "pipeline.hh"
 
-#define MEMORY_POOL_SIZE (1 << 30) // one gigabyte
+#define HOST_PINNED_MEMORY_POOL_SIZE (192 * (1 << 20)) // 192 mega bytes
+#define DEVICE_MEMORY_POOL_SIZE (1 << 30)              // one gigabyte
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
@@ -28,7 +29,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
          "/afs/cri.epita.fr/resources/teach/IRGPUA/images"))
     filepaths.emplace_back(dir_entry.path());
 
-  init_memory_pool(MEMORY_POOL_SIZE);
+  init_host_pinned_memory_pool(HOST_PINNED_MEMORY_POOL_SIZE);
+  init_device_memory_pool(DEVICE_MEMORY_POOL_SIZE);
 
   // - Init pipeline object
 
@@ -46,7 +48,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 #pragma omp parallel for
   for (int i = 0; i < nb_images; ++i)
     {
-      // TODO : make it GPU compatible (aka faster)
+      // DONE : make it GPU compatible (aka faster)
       // You will need to copy images one by one on the GPU
       // You can store the images the way you want on the GPU
       // But you should treat the pipeline as a pipeline :
@@ -54,27 +56,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
       // You must get the image from the pipeline as they arrive and launch computations right away
       // There are still ways to speeds this process of course
       images[i] = pipeline.get_image(i);
-      fix_image_gpu(images[i]);
-      // fix_image_cpu(images[i]);
     }
 
   std::cout << "Done with compute, starting stats" << std::endl;
 
-// -- All images are now fixed : compute stats (total then sort)
-
-// - First compute the total of each image
-
-// TODO : make it GPU compatible (aka faster)
-// You can use multiple CPU threads for your GPU version using openmp or not
-// Up to you :)
-#pragma omp parallel for
-  for (int i = 0; i < nb_images; ++i)
-    {
-      auto& image = images[i];
-      const int image_size = image.width * image.height;
-      image.to_sort.total =
-        std::reduce(image.buffer, image.buffer + image_size, 0);
-    }
+  // -- All images are now fixed : compute stats (total then sort)
 
   // - All totals are known, sort images accordingly (OPTIONAL)
   // Moving the actual images is too expensive, sort image indices instead
@@ -107,11 +93,12 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
   std::cout << "Done, the internet is safe now :)" << std::endl;
 
   // Cleaning
-  // TODO : Don't forget to update this if you change allocation style
-  for (int i = 0; i < nb_images; ++i)
-    free(images[i].buffer);
+  // DONE : Don't forget to update this if you change allocation style
+  for (int ii = 0; ii < nb_images; ++ii)
+    free_host_pinned_memory(images[ii].buffer, images[ii].size() * sizeof(int));
 
-  free_memory_pool();
+  free_host_pinned_memory_pool();
+  free_device_memory_pool();
 
   return 0;
 }

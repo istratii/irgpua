@@ -20,12 +20,9 @@ static __global__ void _scatter(raft::device_span<int> buffer,
 
 void compact(rmm::device_uvector<int>& buffer)
 {
-#define THREADS_PER_BLOCK 1024
-
   const unsigned int size = buffer.size();
-  const unsigned int grid_size =
-    (size + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-  const unsigned int block_size = THREADS_PER_BLOCK;
+  constexpr unsigned int block_size = 1024;
+  const unsigned int grid_size = (size + block_size - 1) / block_size;
   cudaStream_t stream = buffer.stream();
   rmm::device_uvector<int> pred(size, stream);
   raft::device_span<int> buffer_span(buffer.data(), size);
@@ -34,6 +31,4 @@ void compact(rmm::device_uvector<int>& buffer)
   _compact<<<grid_size, block_size, 0, stream>>>(buffer_span, pred_span);
   scan(pred, SCAN_EXCLUSIVE);
   _scatter<<<grid_size, block_size, 0, stream>>>(buffer_span, pred_span);
-
-#undef THREADS_PER_BLOCK
 }

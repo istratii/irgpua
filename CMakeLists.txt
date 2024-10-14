@@ -33,6 +33,7 @@ add_executable(main
   src/map_fix.cu
   src/compact.cu
   src/fix_gpu.cu
-  src/cuda_tools/memory_pool.cu)
+  src/cuda_tools/memory_pool.cu
+  src/reduce.cu)
 target_compile_options(main PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${OpenMP_CXX_FLAGS}>)
 target_link_libraries(main PUBLIC OpenMP::OpenMP_CXX rmm::rmm raft::raft)

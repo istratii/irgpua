@@ -107,14 +107,12 @@ void scan(rmm::device_uvector<int>& buffer, ScanMode mode)
   raft::device_span<int> buffer_span(buffer.data(), buffer.size());
   raft::device_span<_Setup> setup_span(setup, 1);
 
-#define THREADS_PER_BLOCK 1024
+  constexpr unsigned int block_size = 1024;
+  const unsigned int grid_size = (buffer.size() + block_size - 1) / block_size;
 
   if (mode == SCAN_EXCLUSIVE)
     _prepare_buffer_for_exclusive_scan<<<1, 1, 0, stream>>>(buffer_span);
 
-  _scan<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
-          THREADS_PER_BLOCK, THREADS_PER_BLOCK * sizeof(int), stream>>>(
+  _scan<<<grid_size, block_size, block_size * sizeof(int), stream>>>(
     buffer_span, setup_span);
-
-#undef THREADS_PER_BLOCK
 }

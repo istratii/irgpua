@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "cuda_tools/memory_pool.cuh"
+
 struct Image
 {
   Image() = default;
@@ -42,9 +44,11 @@ struct Image
 
     if (magic == "P5")
       {
-        // TODO : Isn't there a better way to allocate the CPU Memory
+        // DONE : Isn't there a better way to allocate the CPU Memory
         // To speed up the Host-to-Device Transfert ?
-        buffer = (int*)malloc(width * height * sizeof(int));
+        // buffer = (int*)malloc(width * height * sizeof(int));
+        buffer = static_cast<int*>(
+          allocate_host_pinned_memory(width * height * sizeof(int)));
         infile.seekg(1, infile.cur);
         for (int i = 0; i < width * height; ++i)
           {
@@ -69,9 +73,11 @@ struct Image
           while (std::getline(lineStream, s, ';'))
             ++image_size;
         }
-        // TODO : Isn't there a better way to allocate the CPU Memory
+        // DONE : Isn't there a better way to allocate the CPU Memory
         // To speed up the Host-to-Device Transfert ?
-        buffer = (int*)malloc(image_size * sizeof(int));
+        // buffer = (int*)malloc(image_size * sizeof(int));
+        buffer = static_cast<int*>(
+          allocate_host_pinned_memory(image_size * sizeof(int)));
 
         std::stringstream lineStream(line);
         std::string s;

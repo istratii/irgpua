@@ -22,27 +22,6 @@ static __global__ void _histogram(raft::device_span<int> buffer,
     atomicAdd(&hist[ii], s_histo[ii]);
 }
 
-rmm::device_uvector<int> histogram(rmm::device_uvector<int>& buffer)
-{
-  cudaStream_t stream = buffer.stream();
-  const unsigned int hist_size = 256;
-  constexpr unsigned int hist_bytes_size = hist_size * sizeof(int);
-  rmm::device_uvector<int> hist(hist_size, stream);
-
-  CUDA_CHECK_ERROR(cudaMemsetAsync(hist.data(), 0, hist_bytes_size, stream));
-
-#define THREADS_PER_BLOCK 1024
-
-  _histogram<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
-               THREADS_PER_BLOCK, hist_bytes_size, stream>>>(
-    raft::device_span<int>(buffer.data(), buffer.size()),
-    raft::device_span<int>(hist.data(), hist.size()));
-
-#undef THREADS_PER_BLOCK
-
-  return hist;
-}
-
 static __global__ void _compute_first_non_zero(raft::device_span<int> hist,
                                                raft::device_span<int> cdf_min)
 {
@@ -64,31 +43,36 @@ static __global__ void _equalize_histogram(raft::device_span<int> buffer,
 
   if (id < N)
     {
-      float tmp = (hist[buffer[id]] - cdf_min[0])
-        / static_cast<float>(N - cdf_min[0] + 1e-9f);
-      tmp = roundf(tmp * 255.0f);
+      float tmp = hist[buffer[id]] - cdf_min[0];
+      tmp /= static_cast<float>(N - cdf_min[0] + 1e-9f);
+      tmp *= 255.0f;
+      tmp = roundf(tmp);
       buffer[id] = tmp;
     }
 }
 
-void equalize_histogram(rmm::device_uvector<int>& buffer,
-                        rmm::device_uvector<int>& hist)
+void equalize_histogram(rmm::device_uvector<int>& buffer)
 {
   cudaStream_t stream = buffer.stream();
+  raft::device_span<int> buffer_span(buffer.data(), buffer.size());
+  constexpr unsigned int block_size = 1024;
+  const unsigned int grid_size = (buffer.size() + block_size - 1) / block_size;
+
+  // compute histogram
+  rmm::device_uvector<int> histogram(256, stream);
+  constexpr unsigned int histogram_size_bytes = 256 * sizeof(int);
+  cudaMemsetAsync(histogram.data(), 0, histogram_size_bytes, stream);
+  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
+  raft::device_span<int> histogram_span(histogram.data(), histogram.size());
+  _histogram<<<grid_size, block_size, histogram_size_bytes, stream>>>(
+    buffer_span, histogram_span);
+
+  // equalize histogram
   rmm::device_scalar<int> cdf_min(0, stream);
   raft::device_span<int> cdf_min_span(cdf_min.data(), cdf_min.size());
-  raft::device_span<int> hist_span(hist.data(), hist.size());
-
-  scan(hist, SCAN_INCLUSIVE);
-  _compute_first_non_zero<<<1, 1, 0, stream>>>(hist_span, cdf_min_span);
-
-#define THREADS_PER_BLOCK 1024
-
-  _equalize_histogram<<<(buffer.size() + THREADS_PER_BLOCK - 1)
-                          / THREADS_PER_BLOCK,
-                        THREADS_PER_BLOCK, 0, stream>>>(
-    raft::device_span<int>(buffer.data(), buffer.size()), hist_span,
-    cdf_min_span);
-
-#undef THREADS_PER_BLOCK
+  // compute cumulative histogram sum
+  scan(histogram, SCAN_INCLUSIVE);
+  _compute_first_non_zero<<<1, 1, 0, stream>>>(histogram_span, cdf_min_span);
+  _equalize_histogram<<<grid_size, block_size, 0, stream>>>(
+    buffer_span, histogram_span, cdf_min_span);
 }

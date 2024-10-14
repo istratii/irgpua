@@ -11,11 +11,9 @@ static __global__ void _map_fix(raft::device_span<int> d_buffer)
 
 void map_fix(rmm::device_uvector<int>& buffer)
 {
-#define THREADS_PER_BLOCK 1024
+  constexpr unsigned int block_size = 1024;
+  const unsigned int grid_size = (buffer.size() + block_size - 1) / block_size;
 
-  _map_fix<<<(buffer.size() + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK,
-             THREADS_PER_BLOCK, 0, buffer.stream()>>>(
+  _map_fix<<<grid_size, block_size, 0, buffer.stream()>>>(
     raft::device_span<int>(buffer.data(), buffer.size()));
-
-#undef THREADS_PER_BLOCK
 }
