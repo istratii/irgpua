@@ -37,7 +37,7 @@ void fix_image_gpu(Image& to_fix, cudaStream_t stream)
   reduce(buffer, total);
 
   // copy total pixel sum to host, stream aware
-  CUDA_CHECK_ERROR(cudaMemcpyAsync(&to_fix.to_sort.total, total.data(),
+  CUDA_CHECK_ERROR(cudaMemcpyAsync(to_fix.to_sort.total, total.data(),
                                    sizeof(int), cudaMemcpyDeviceToHost,
                                    stream));
 
