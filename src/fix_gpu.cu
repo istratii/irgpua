@@ -37,7 +37,7 @@ void fix_image_gpu(Image& to_fix, cudaStream_t stream)
   reduce(buffer, total);
 
   // copy total pixel sum to host, stream aware
-  cudaMemcpyAsync(&to_fix.to_sort.total, total.data(), sizeof(int),
+  cudaMemcpyAsync(to_fix.to_sort.total, total.data(), sizeof(int),
                   cudaMemcpyDeviceToHost, stream);
 
   // copy image to host back from device, stream aware
