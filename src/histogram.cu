@@ -62,7 +62,6 @@ void equalize_histogram(rmm::device_uvector<int>& buffer)
   rmm::device_uvector<int> histogram(256, stream);
   constexpr unsigned int histogram_size_bytes = 256 * sizeof(int);
   cudaMemsetAsync(histogram.data(), 0, histogram_size_bytes, stream);
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
   raft::device_span<int> histogram_span(histogram.data(), histogram.size());
   _histogram<<<grid_size, block_size, histogram_size_bytes, stream>>>(
     buffer_span, histogram_span);

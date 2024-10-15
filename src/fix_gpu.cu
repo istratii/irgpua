@@ -9,7 +9,6 @@ void fix_image_gpu(Image& to_fix, cudaStream_t stream)
   // copy image to device memory, stream aware
   cudaMemcpyAsync(buffer.data(), to_fix.buffer, actual_size * sizeof(int),
                   cudaMemcpyHostToDevice, stream);
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
   // #1 Compact
   // Build predicate vector
@@ -43,5 +42,4 @@ void fix_image_gpu(Image& to_fix, cudaStream_t stream)
   // copy image to host back from device, stream aware
   cudaMemcpyAsync(to_fix.buffer, buffer.data(), image_size * sizeof(int),
                   cudaMemcpyDeviceToHost, stream);
-  CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 }
