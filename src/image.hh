@@ -17,6 +17,8 @@ struct Image
   Image(const std::string& filepath, int id = -1)
   {
     to_sort.id = id;
+    to_sort.total = (uint64_t*)allocate_host_pinned_memory(sizeof(uint64_t));
+    *(to_sort.total) = 0;
 
     std::ifstream infile(filepath, std::ifstream::binary);
 
@@ -121,7 +123,7 @@ struct Image
   int actual_size = -1;
   struct ToSort
   {
-    uint64_t total = 0;
+    uint64_t* total = nullptr;
     int id = -1;
   } to_sort;
 };

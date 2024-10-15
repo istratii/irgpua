@@ -75,7 +75,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
   // TODO OPTIONAL : make it GPU compatible (aka faster)
   std::sort(to_sort.begin(), to_sort.end(),
-            [](ToSort a, ToSort b) { return a.total < b.total; });
+            [](ToSort a, ToSort b) { return *(a.total) < *(b.total); });
 
   // TODO : Test here that you have the same results
   // You can compare visually and should compare image vectors values and "total" values
@@ -83,7 +83,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
   for (int i = 0; i < nb_images; ++i)
     {
       std::cout << "Image #" << images[i].to_sort.id
-                << " total : " << images[i].to_sort.total << std::endl;
+                << " total : " << *(images[i].to_sort.total) << std::endl;
       std::ostringstream oss;
       oss << "Image#" << images[i].to_sort.id << ".pgm";
       std::string str = oss.str();
@@ -94,8 +94,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
   // Cleaning
   // DONE : Don't forget to update this if you change allocation style
-  for (int ii = 0; ii < nb_images; ++ii)
-    free_host_pinned_memory(images[ii].buffer, images[ii].size() * sizeof(int));
+  for (int i = 0; i < nb_images; ++i)
+    {
+      free_host_pinned_memory(images[i].to_sort.total, sizeof(uint64_t));
+      free_host_pinned_memory(images[i].buffer, images[i].size() * sizeof(int));
+    }
 
   free_host_pinned_memory_pool();
   free_device_memory_pool();
