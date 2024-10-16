@@ -77,18 +77,20 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
   std::sort(to_sort.begin(), to_sort.end(),
             [](ToSort a, ToSort b) { return *(a.total) < *(b.total); });
 
+#pragma omp parallel for
+  for (int i = 0; i < nb_images; ++i)
+    {
+      std::ostringstream oss;
+      oss << "Image#" << images[i].to_sort.id << ".pgm";
+      images[i].write(oss.str());
+    }
+
   // TODO : Test here that you have the same results
   // You can compare visually and should compare image vectors values and "total" values
   // If you did the sorting, check that the ids are in the same order
   for (int i = 0; i < nb_images; ++i)
-    {
-      std::cout << "Image #" << images[i].to_sort.id
-                << " total : " << *(images[i].to_sort.total) << std::endl;
-      std::ostringstream oss;
-      oss << "Image#" << images[i].to_sort.id << ".pgm";
-      std::string str = oss.str();
-      images[i].write(str);
-    }
+    std::cout << "Image #" << images[i].to_sort.id
+              << " total : " << *(images[i].to_sort.total) << '\n';
 
   std::cout << "Done, the internet is safe now :)" << std::endl;
 
