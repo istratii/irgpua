@@ -94,16 +94,14 @@ _prepare_buffer_for_exclusive_scan(raft::device_span<int> buffer)
     buffer[0] = 0;
 }
 
-void scan(rmm::device_buffer& memchunk,
+void scan(char* chunk, cudaStream_t stream,
           raft::device_span<int> buffer_dspan,
           ScanMode mode)
 {
   raft::common::nvtx::range fscope("scan");
 
-  cudaStream_t stream = memchunk.stream();
   // prepare setup
-  char* memchunk_ptr = static_cast<char*>(memchunk.data());
-  int* begin_raw_setup = reinterpret_cast<int*>(memchunk_ptr + scan_offset);
+  int* begin_raw_setup = reinterpret_cast<int*>(chunk + scan_offset);
   constexpr size_t size_raw_setup = bytes_per_scan / sizeof(int);
   raft::device_span<int> raw_setup_span(begin_raw_setup, size_raw_setup);
   CUDA_CHECK_ERROR(

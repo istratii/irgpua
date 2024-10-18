@@ -16,6 +16,7 @@ enum ScanMode
   SCAN_EXCLUSIVE,
 };
 
-void scan(rmm::device_buffer& memchunk,
+void scan(char* chunk,
+          cudaStream_t stream,
           raft::device_span<int> buffer_dspan,
           ScanMode mode);
