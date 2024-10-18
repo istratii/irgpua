@@ -21,11 +21,12 @@ static __global__ void _reduce(raft::device_span<int> buffer,
     atomicAdd(total.data(), sdata[0]);
 }
 
-// void reduce(rmm::device_uvector<int>& buffer, rmm::device_scalar<int>& total)
 void reduce(raft::device_span<int> buffer_dspan,
             raft::device_span<int> total_dspan,
             cudaStream_t stream)
 {
+  raft::common::nvtx::range fscope("reduce");
+
   constexpr unsigned int block_size = 64;
   const unsigned int grid_size =
     (buffer_dspan.size() + block_size - 1) / block_size;

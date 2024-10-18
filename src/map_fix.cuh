@@ -5,9 +5,9 @@
 #include <rmm/device_uvector.hpp>
 
 #include "cuda_tools/cuda_error_checking.cuh"
+#include "cuda_tools/nvtx.cuh"
 
 #define ASSOC_VAL(idx)                                                         \
   (((idx) % 4 == 0) ? 1 : ((idx) % 4 == 1) ? -5 : ((idx) % 4 == 2) ? 3 : -8)
 
-// void map_fix(rmm::device_uvector<int>& buffer);
 void map_fix(raft::device_span<int> buffer_span, cudaStream_t stream);

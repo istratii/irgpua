@@ -8,6 +8,7 @@
 
 #include "cuda_tools/constants.hh"
 #include "cuda_tools/cuda_error_checking.cuh"
+#include "cuda_tools/nvtx.cuh"
 #include "scan.cuh"
 
 void equalize_histogram(rmm::device_buffer& memchunk,

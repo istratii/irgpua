@@ -20,6 +20,8 @@ static __global__ void _scatter(raft::device_span<int> buffer_dspan,
 
 void compact(rmm::device_buffer& memchunk, raft::device_span<int> buffer_dspan)
 {
+  raft::common::nvtx::range fscope("compact");
+
   const unsigned int size = buffer_dspan.size();
   constexpr unsigned int block_size = 1024;
   const unsigned int grid_size = (size + block_size - 1) / block_size;

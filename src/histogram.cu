@@ -54,6 +54,8 @@ static __global__ void _equalize_histogram(raft::device_span<int> buffer,
 void equalize_histogram(rmm::device_buffer& memchunk,
                         raft::device_span<int> buffer_dspan)
 {
+  raft::common::nvtx::range fscope("equalize histrogram");
+
   cudaStream_t stream = memchunk.stream();
   char* memchunk_ptr = static_cast<char*>(memchunk.data());
   constexpr unsigned int block_size = 1024;

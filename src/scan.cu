@@ -98,8 +98,9 @@ void scan(rmm::device_buffer& memchunk,
           raft::device_span<int> buffer_dspan,
           ScanMode mode)
 {
-  cudaStream_t stream = memchunk.stream();
+  raft::common::nvtx::range fscope("scan");
 
+  cudaStream_t stream = memchunk.stream();
   // prepare setup
   char* memchunk_ptr = static_cast<char*>(memchunk.data());
   int* begin_raw_setup = reinterpret_cast<int*>(memchunk_ptr + scan_offset);
