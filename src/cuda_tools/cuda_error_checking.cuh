@@ -11,3 +11,16 @@
           std::exit(EXIT_FAILURE);                                             \
         }                                                                      \
   } while (0)
+
+#define CUDA_CHECK_ERROR2(call, marker)                                        \
+  do                                                                           \
+    {                                                                          \
+      cudaError_t err = call;                                                  \
+      if (err != cudaSuccess)                                                  \
+        {                                                                      \
+          std::cerr << marker << "CUDA error in " << __FILE__ << " at line "   \
+                    << __LINE__ << ": " << cudaGetErrorString(err)             \
+                    << std::endl;                                              \
+          std::exit(EXIT_FAILURE);                                             \
+        }                                                                      \
+  } while (0)

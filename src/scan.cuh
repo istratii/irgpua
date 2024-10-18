@@ -5,6 +5,7 @@
 #include <rmm/device_buffer.hpp>
 #include <rmm/device_uvector.hpp>
 
+#include "cuda_tools/constants.hh"
 #include "cuda_tools/cuda_error_checking.cuh"
 #include "image.hh"
 
@@ -14,4 +15,7 @@ enum ScanMode
   SCAN_EXCLUSIVE,
 };
 
-void scan(rmm::device_uvector<int>& buffer, ScanMode mode);
+// void scan(rmm::device_uvector<int>& buffer, ScanMode mode);
+void scan(rmm::device_uvector<int>& memchunk,
+          raft::device_span<int> buffer_dspan,
+          ScanMode mode);

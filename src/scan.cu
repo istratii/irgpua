@@ -94,25 +94,27 @@ _prepare_buffer_for_exclusive_scan(raft::device_span<int> buffer)
     buffer[0] = 0;
 }
 
-void scan(rmm::device_uvector<int>& buffer, ScanMode mode)
+void scan(rmm::device_uvector<int>& memchunk,
+          raft::device_span<int> buffer_dspan,
+          ScanMode mode)
 {
-  cudaStream_t stream = buffer.stream();
+  cudaStream_t stream = memchunk.stream();
 
   // prepare setup
-  rmm::device_buffer raw_setup(sizeof(_Setup), stream);
+  int* begin_raw_setup = memchunk.data() + scan_offset / sizeof(int);
+  constexpr size_t size_raw_setup = bytes_per_scan / sizeof(int);
+  raft::device_span<int> raw_setup_span(begin_raw_setup, size_raw_setup);
   CUDA_CHECK_ERROR(
-    cudaMemsetAsync(raw_setup.data(), 0, raw_setup.size(), stream));
-  _Setup* setup = static_cast<_Setup*>(raw_setup.data());
-
-  raft::device_span<int> buffer_span(buffer.data(), buffer.size());
-  raft::device_span<_Setup> setup_span(setup, 1);
+    cudaMemsetAsync(raw_setup_span.data(), 0, bytes_per_scan, stream));
+  raft::device_span<_Setup> setup_span((_Setup*)begin_raw_setup, 1);
 
   constexpr unsigned int block_size = 1024;
-  const unsigned int grid_size = (buffer.size() + block_size - 1) / block_size;
+  const unsigned int grid_size =
+    (buffer_dspan.size() + block_size - 1) / block_size;
 
   if (mode == SCAN_EXCLUSIVE)
-    _prepare_buffer_for_exclusive_scan<<<1, 1, 0, stream>>>(buffer_span);
+    _prepare_buffer_for_exclusive_scan<<<1, 1, 0, stream>>>(buffer_dspan);
 
   _scan<<<grid_size, block_size, block_size * sizeof(int), stream>>>(
-    buffer_span, setup_span);
+    buffer_dspan, setup_span);
 }

@@ -51,28 +51,31 @@ static __global__ void _equalize_histogram(raft::device_span<int> buffer,
     }
 }
 
-void equalize_histogram(rmm::device_uvector<int>& buffer)
+void equalize_histogram(rmm::device_uvector<int>& memchunk,
+                        raft::device_span<int> buffer_dspan)
 {
-  cudaStream_t stream = buffer.stream();
-  raft::device_span<int> buffer_span(buffer.data(), buffer.size());
+  cudaStream_t stream = memchunk.stream();
   constexpr unsigned int block_size = 1024;
-  const unsigned int grid_size = (buffer.size() + block_size - 1) / block_size;
+  const unsigned int grid_size =
+    (buffer_dspan.size() + block_size - 1) / block_size;
 
   // compute histogram
-  rmm::device_uvector<int> histogram(256, stream);
-  constexpr unsigned int histogram_size_bytes = 256 * sizeof(int);
+  int* begin_hist = memchunk.data() + histogram_offset / sizeof(int);
+  constexpr size_t size_hist = bytes_per_histogram / sizeof(int);
+  raft::device_span<int> histogram_dspan(begin_hist, size_hist);
   CUDA_CHECK_ERROR(
-    cudaMemsetAsync(histogram.data(), 0, histogram_size_bytes, stream));
-  raft::device_span<int> histogram_span(histogram.data(), histogram.size());
-  _histogram<<<grid_size, block_size, histogram_size_bytes, stream>>>(
-    buffer_span, histogram_span);
+    cudaMemsetAsync(histogram_dspan.data(), 0, bytes_per_histogram, stream));
+  _histogram<<<grid_size, block_size, bytes_per_histogram, stream>>>(
+    buffer_dspan, histogram_dspan);
 
   // equalize histogram
-  rmm::device_scalar<int> cdf_min(0, stream);
-  raft::device_span<int> cdf_min_span(cdf_min.data(), cdf_min.size());
+  int* begin_cdf_min = memchunk.data() + cdf_min_offset / sizeof(int);
+  raft::device_span<int> cdf_min_dspan(begin_cdf_min, 1);
+  CUDA_CHECK_ERROR(
+    cudaMemsetAsync(cdf_min_dspan.data(), 0, bytes_per_cdf_min, stream));
   // compute cumulative histogram sum
-  scan(histogram, SCAN_INCLUSIVE);
-  _compute_first_non_zero<<<1, 1, 0, stream>>>(histogram_span, cdf_min_span);
+  scan(memchunk, histogram_dspan, SCAN_INCLUSIVE);
+  _compute_first_non_zero<<<1, 1, 0, stream>>>(histogram_dspan, cdf_min_dspan);
   _equalize_histogram<<<grid_size, block_size, 0, stream>>>(
-    buffer_span, histogram_span, cdf_min_span);
+    buffer_dspan, histogram_dspan, cdf_min_dspan);
 }

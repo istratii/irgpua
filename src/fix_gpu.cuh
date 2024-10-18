@@ -6,6 +6,7 @@
 #include <rmm/device_uvector.hpp>
 
 #include "compact.cuh"
+#include "cuda_tools/constants.hh"
 #include "cuda_tools/cuda_error_checking.cuh"
 #include "histogram.cuh"
 #include "image.hh"
