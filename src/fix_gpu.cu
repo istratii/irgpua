@@ -1,10 +1,5 @@
 #include "fix_gpu.cuh"
 
-#define WRAP_NVTX(Name, Cmd)                                                   \
-  raft::common::nvtx::push_range(Name);                                        \
-  Cmd;                                                                         \
-  raft::common::nvtx::pop_range()
-
 void fix_image_gpu(Image& to_fix, char* chunk, cudaStream_t stream)
 {
   raft::common::nvtx::range fscope("fix image gpu");
