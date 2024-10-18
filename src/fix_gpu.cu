@@ -1,14 +1,21 @@
 #include "fix_gpu.cuh"
 
-void fix_image_gpu(Image& to_fix, cudaStream_t stream)
+#define WRAP_NVTX(Name, Cmd)                                                   \
+  raft::common::nvtx::push_range(Name);                                        \
+  Cmd;                                                                         \
+  raft::common::nvtx::pop_range()
+
+void fix_image_gpu(Image& to_fix, char* chunk, cudaStream_t stream)
 {
+  raft::common::nvtx::range fscope("fix image gpu");
+
   const unsigned int actual_size = to_fix.size();
   const unsigned int image_size = to_fix.width * to_fix.height;
-  rmm::device_uvector<int> memchunk(bytes_per_chunk / sizeof(int), stream);
+  rmm::device_buffer memchunk(chunk, bytes_per_chunk, stream);
 
   // create device span for buffer
-  int* begin_buffer = memchunk.data() + buffer_offset / sizeof(int);
-  raft::device_span<int> buffer_dspan(begin_buffer, actual_size);
+  raft::device_span<int> buffer_dspan(
+    reinterpret_cast<int*>(chunk + buffer_offset), actual_size);
 
   // copy image to device memory, stream aware
   CUDA_CHECK_ERROR(cudaMemcpyAsync(buffer_dspan.data(), to_fix.buffer,
@@ -23,10 +30,16 @@ void fix_image_gpu(Image& to_fix, cudaStream_t stream)
 
   // only `image_size` has to be used after
   // `image_size` <= `actual_size`, thus no overhead
-  buffer_dspan = raft::device_span<int>(begin_buffer, image_size);
+  buffer_dspan = raft::device_span<int>(
+    reinterpret_cast<int*>(chunk + buffer_offset), image_size);
 
   // #2 Apply map to fix pixels
   map_fix(buffer_dspan, stream);
+
+  // reduce number of cudaMemsetAsync calls
+  CUDA_CHECK_ERROR(cudaMemsetAsync(
+    chunk + histogram_offset, 0,
+    bytes_per_histogram + bytes_per_cdf_min + bytes_per_total, stream));
 
   // #3 Histogram equalization
   // Histogram
@@ -37,9 +50,8 @@ void fix_image_gpu(Image& to_fix, cudaStream_t stream)
 
   // compute the total of each image
   // doing this here because the images are still on device memory
-  int* begin_total = memchunk.data() + total_offset / sizeof(int);
-  raft::device_span<int> total_dspan(begin_total, 1);
-  CUDA_CHECK_ERROR(cudaMemsetAsync(total_dspan.data(), 0, sizeof(int), stream));
+  raft::device_span<int> total_dspan(
+    reinterpret_cast<int*>(chunk + total_offset), 1);
   reduce(buffer_dspan, total_dspan, stream);
 
   // copy total pixel sum to host, stream aware

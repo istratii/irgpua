@@ -51,28 +51,28 @@ static __global__ void _equalize_histogram(raft::device_span<int> buffer,
     }
 }
 
-void equalize_histogram(rmm::device_uvector<int>& memchunk,
+void equalize_histogram(rmm::device_buffer& memchunk,
                         raft::device_span<int> buffer_dspan)
 {
   cudaStream_t stream = memchunk.stream();
+  char* memchunk_ptr = static_cast<char*>(memchunk.data());
   constexpr unsigned int block_size = 1024;
   const unsigned int grid_size =
     (buffer_dspan.size() + block_size - 1) / block_size;
 
   // compute histogram
-  int* begin_hist = memchunk.data() + histogram_offset / sizeof(int);
-  constexpr size_t size_hist = bytes_per_histogram / sizeof(int);
-  raft::device_span<int> histogram_dspan(begin_hist, size_hist);
-  CUDA_CHECK_ERROR(
-    cudaMemsetAsync(histogram_dspan.data(), 0, bytes_per_histogram, stream));
+  // its part from memchunk is already set to 0
+  raft::device_span<int> histogram_dspan(
+    reinterpret_cast<int*>(memchunk_ptr + histogram_offset),
+    bytes_per_histogram / sizeof(int));
   _histogram<<<grid_size, block_size, bytes_per_histogram, stream>>>(
     buffer_dspan, histogram_dspan);
 
   // equalize histogram
-  int* begin_cdf_min = memchunk.data() + cdf_min_offset / sizeof(int);
-  raft::device_span<int> cdf_min_dspan(begin_cdf_min, 1);
-  CUDA_CHECK_ERROR(
-    cudaMemsetAsync(cdf_min_dspan.data(), 0, bytes_per_cdf_min, stream));
+  // its part from memchunk is already set to 0
+  raft::device_span<int> cdf_min_dspan(
+    reinterpret_cast<int*>(memchunk_ptr + cdf_min_offset), 1);
+
   // compute cumulative histogram sum
   scan(memchunk, histogram_dspan, SCAN_INCLUSIVE);
   _compute_first_non_zero<<<1, 1, 0, stream>>>(histogram_dspan, cdf_min_dspan);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <raft/common/nvtx.hpp>
 #include <raft/core/device_span.hpp>
 #include <raft/core/handle.hpp>
 #include <rmm/device_scalar.hpp>
@@ -14,4 +15,4 @@
 #include "reduce.cuh"
 #include "scan.cuh"
 
-void fix_image_gpu(Image& to_fix, cudaStream_t stream);
+void fix_image_gpu(Image& to_fix, char* chunk, cudaStream_t stream);

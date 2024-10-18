@@ -15,7 +15,6 @@ enum ScanMode
   SCAN_EXCLUSIVE,
 };
 
-// void scan(rmm::device_uvector<int>& buffer, ScanMode mode);
-void scan(rmm::device_uvector<int>& memchunk,
+void scan(rmm::device_buffer& memchunk,
           raft::device_span<int> buffer_dspan,
           ScanMode mode);

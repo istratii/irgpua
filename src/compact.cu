@@ -18,18 +18,17 @@ static __global__ void _scatter(raft::device_span<int> buffer_dspan,
     buffer_dspan[pred_dspan[idx]] = buffer_dspan[idx];
 }
 
-// void compact(rmm::device_uvector<int>& buffer)
-void compact(rmm::device_uvector<int>& memchunk,
-             raft::device_span<int> buffer_dspan)
+void compact(rmm::device_buffer& memchunk, raft::device_span<int> buffer_dspan)
 {
   const unsigned int size = buffer_dspan.size();
   constexpr unsigned int block_size = 1024;
   const unsigned int grid_size = (size + block_size - 1) / block_size;
   cudaStream_t stream = memchunk.stream();
+  char* memchunk_ptr = static_cast<char*>(memchunk.data());
 
-  int* begin_pred = memchunk.data() + predicate_offset / sizeof(int);
-  constexpr size_t size_pred = bytes_per_predicate / sizeof(int);
-  raft::device_span<int> pred_dspan(begin_pred, size_pred);
+  raft::device_span<int> pred_dspan(
+    reinterpret_cast<int*>(memchunk_ptr + predicate_offset),
+    bytes_per_predicate / sizeof(int));
 
   _compact<<<grid_size, block_size, 0, stream>>>(buffer_dspan, pred_dspan);
   scan(memchunk, pred_dspan, SCAN_EXCLUSIVE);

@@ -10,6 +10,5 @@
 #include "cuda_tools/cuda_error_checking.cuh"
 #include "scan.cuh"
 
-// void equalize_histogram(rmm::device_uvector<int>& buffer);
-void equalize_histogram(rmm::device_uvector<int>& memchunk,
+void equalize_histogram(rmm::device_buffer& memchunk,
                         raft::device_span<int> buffer_dspan);
