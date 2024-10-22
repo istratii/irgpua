@@ -41,7 +41,7 @@ struct Pipeline
         fix_image_gpu(images[ii], handlers[ii].get_stream());
       }
 
-    CUDA_CHECK_ERROR2(cudaDeviceSynchronize(), "end");
+    CUDA_CHECK_ERROR(cudaDeviceSynchronize());
   }
 
   Image&& get_image(int i) { return std::move(images[i]); }
