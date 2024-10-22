@@ -11,6 +11,5 @@
 #include "cuda_tools/nvtx.cuh"
 #include "scan.cuh"
 
-void equalize_histogram(char* chunk,
-                        cudaStream_t stream,
+void equalize_histogram(rmm::device_buffer& memchunk,
                         raft::device_span<int> buffer_dspan);

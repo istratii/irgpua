@@ -5,6 +5,7 @@
 #include <raft/core/handle.hpp>
 #include <rmm/device_scalar.hpp>
 #include <rmm/device_uvector.hpp>
+#include <rmm/device_buffer.hpp>
 
 #include "compact.cuh"
 #include "cuda_tools/constants.hh"
@@ -15,4 +16,4 @@
 #include "reduce.cuh"
 #include "scan.cuh"
 
-void fix_image_gpu(Image& to_fix, char* chunk, cudaStream_t stream);
+void fix_image_gpu(Image& to_fix, cudaStream_t stream);

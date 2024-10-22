@@ -11,6 +11,4 @@
 #include "cuda_tools/nvtx.cuh"
 #include "scan.cuh"
 
-void compact(char* chunk,
-             cudaStream_t stream,
-             raft::device_span<int> buffer_dspan);
+void compact(rmm::device_buffer& memchunk, raft::device_span<int> buffer_dspan);

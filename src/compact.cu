@@ -18,25 +18,21 @@ static __global__ void _scatter(raft::device_span<int> buffer_dspan,
     buffer_dspan[pred_dspan[idx]] = buffer_dspan[idx];
 }
 
-void compact(char* chunk,
-             cudaStream_t stream,
-             raft::device_span<int> buffer_dspan)
+void compact(rmm::device_buffer& memchunk, raft::device_span<int> buffer_dspan)
 {
   raft::common::nvtx::range fscope("compact");
 
+  cudaStream_t stream = memchunk.stream();
   const unsigned int size = buffer_dspan.size();
   constexpr unsigned int block_size = 1024;
   const unsigned int grid_size = (size + block_size - 1) / block_size;
+  char* chunk = static_cast<char*>(memchunk.data());
 
   raft::device_span<int> pred_dspan(
     reinterpret_cast<int*>(chunk + predicate_offset),
     bytes_per_predicate / sizeof(int));
 
-  WRAP_NVTX(
-    "compact kernel",
-    (_compact<<<grid_size, block_size, 0, stream>>>(buffer_dspan, pred_dspan)));
-  scan(chunk, stream, pred_dspan, SCAN_EXCLUSIVE);
-  WRAP_NVTX(
-    "scatter kernel",
-    (_scatter<<<grid_size, block_size, 0, stream>>>(buffer_dspan, pred_dspan)));
+  _compact<<<grid_size, block_size, 0, stream>>>(buffer_dspan, pred_dspan);
+  scan(memchunk, pred_dspan, SCAN_EXCLUSIVE);
+  _scatter<<<grid_size, block_size, 0, stream>>>(buffer_dspan, pred_dspan);
 }

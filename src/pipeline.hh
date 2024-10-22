@@ -32,16 +32,13 @@ struct Pipeline
     const unsigned int N = filepaths.size();
     images = std::vector<Image>(N);
     handlers = std::vector<raft::handle_t>(N);
-    rmm::device_buffer memchunk(bytes_per_chunk * N, rmm::cuda_stream_default);
-    char* memchunk_ptr = static_cast<char*>(memchunk.data());
 
 #pragma omp parallel for
     for (std::size_t ii = 0; ii < N; ++ii)
       {
         const int image_id = std::stoi(get_number(filepaths[ii]));
         images[ii] = Image(filepaths[ii], image_id);
-        fix_image_gpu(images[ii], memchunk_ptr + bytes_per_chunk * ii,
-                      handlers[ii].get_stream());
+        fix_image_gpu(images[ii], handlers[ii].get_stream());
       }
 
     CUDA_CHECK_ERROR2(cudaDeviceSynchronize(), "end");
