@@ -101,7 +101,10 @@ struct Image
     std::ofstream outfile(filepath, std::ofstream::binary);
     if (outfile.fail())
       throw std::runtime_error("Failed to open");
-    outfile << "P5" << "\n" << width << " " << height << "\n" << 255 << "\n";
+    outfile << "P5"
+            << "\n"
+            << width << " " << height << "\n"
+            << 255 << "\n";
 
     for (int i = 0; i < height * width; ++i)
       {

@@ -3,9 +3,9 @@
 #include <raft/common/nvtx.hpp>
 #include <raft/core/device_span.hpp>
 #include <raft/core/handle.hpp>
+#include <rmm/device_buffer.hpp>
 #include <rmm/device_scalar.hpp>
 #include <rmm/device_uvector.hpp>
-#include <rmm/device_buffer.hpp>
 
 #include "compact.cuh"
 #include "cuda_tools/constants.hh"
