@@ -6,11 +6,16 @@
 #include <regex>
 #include <stack>
 #include <string>
-#include <raft/core/handle.hpp>
-#include <rmm/device_buffer.hpp>
+#ifndef _IRGPUA_CPU
+#  include <raft/core/handle.hpp>
+#  include <rmm/device_buffer.hpp>
+#endif
 
-#include "fix_cpu.cuh"
-#include "fix_gpu.cuh"
+#ifdef _IRGPUA_CPU
+#  include "fix_cpu.cuh"
+#else
+#  include "fix_gpu.cuh"
+#endif
 
 static std::string get_number(const std::string& str)
 {
