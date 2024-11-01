@@ -8,6 +8,7 @@
 #include <string>
 #include <raft/core/handle.hpp>
 #include <rmm/device_buffer.hpp>
+
 #include "fix_gpu.cuh"
 
 static std::string get_number(const std::string& str)

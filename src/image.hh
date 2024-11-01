@@ -17,8 +17,6 @@ struct Image
   Image(const std::string& filepath, int id = -1)
   {
     to_sort.id = id;
-    to_sort.total = (uint64_t*)allocate_host_pinned_memory(sizeof(uint64_t));
-    *(to_sort.total) = 0;
 
     std::ifstream infile(filepath, std::ifstream::binary);
 
@@ -78,8 +76,10 @@ struct Image
         // DONE : Isn't there a better way to allocate the CPU Memory
         // To speed up the Host-to-Device Transfert ?
         // buffer = (int*)malloc(image_size * sizeof(int));
-        buffer = static_cast<int*>(
-          allocate_host_pinned_memory(image_size * sizeof(int)));
+        buffer = static_cast<int*>(allocate_host_pinned_memory(
+          image_size * sizeof(int) + sizeof(uint64_t)));
+        to_sort.total = reinterpret_cast<uint64_t*>(buffer + image_size);
+        *(to_sort.total) = 0;
 
         std::stringstream lineStream(line);
         std::string s;
