@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "cuda_tools/constants.hh"
 #include "cuda_tools/memory_pool.cuh"
 
 struct Image
