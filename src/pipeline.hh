@@ -54,7 +54,9 @@ struct Pipeline
 #endif
       }
 
+#ifndef _IRGPUA_CPU
     CUDA_CHECK_ERROR(cudaDeviceSynchronize());
+#endif
   }
 
   Image&& get_image(int i) { return std::move(images[i]); }

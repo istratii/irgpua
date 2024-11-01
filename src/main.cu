@@ -54,6 +54,17 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 
   // -- All images are now fixed : compute stats (total then sort)
 
+#ifdef _IRGPUA_CPU
+#  pragma omp parallel for
+  for (int i = 0; i < nb_images; ++i)
+    {
+      auto& image = images[i];
+      const int image_size = image.width * image.height;
+      image.to_sort.total =
+        std::reduce(image.buffer, image.buffer + image_size, 0);
+    }
+#endif
+
   // - All totals are known, sort images accordingly (OPTIONAL)
   // Moving the actual images is too expensive, sort image indices instead
   // Copying to an id array and sort it instead
@@ -74,20 +85,29 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 #endif
   });
 
-#pragma omp parallel for
-  for (int i = 0; i < nb_images; ++i)
+#ifdef _IRGPUA_CPU
+  for (int ii = 0; ii < nb_images; ++ii)
+    {
+      std::cout << "Image #" << images[ii].to_sort.id
+                << " total : " << images[ii].to_sort.total << std::endl;
+      std::ostringstream oss;
+      oss << "Image#" << images[ii].to_sort.id << ".pgm";
+      std::string str = oss.str();
+      images[ii].write(str);
+    }
+#else
+#  pragma omp parallel for
+  for (int ii = 0; ii < nb_images; ++ii)
     {
       std::ostringstream oss;
-      oss << "Image#" << images[i].to_sort.id << ".pgm";
-      images[i].write(oss.str());
+      oss << "Image#" << images[ii].to_sort.id << ".pgm";
+      images[ii].write(oss.str());
     }
 
-  // TODO : Test here that you have the same results
-  // You can compare visually and should compare image vectors values and "total" values
-  // If you did the sorting, check that the ids are in the same order
-  for (int i = 0; i < nb_images; ++i)
-    std::cout << "Image #" << images[i].to_sort.id
-              << " total : " << *(images[i].to_sort.total) << '\n';
+  for (int ii = 0; ii < nb_images; ++ii)
+    std::cout << "Image #" << images[ii].to_sort.id
+              << " total : " << *(images[ii].to_sort.total) << '\n';
+#endif
 
   std::cout << "Done, the internet is safe now :)" << '\n';
 
