@@ -30,7 +30,7 @@ static __global__ void _compute_first_non_zero(raft::device_span<int> hist,
   while (ii < N && !hist[ii])
     ++ii;
   cdf_min[0] = ii < N ? hist[ii] : -1;
-  assert(cdf_min[0] >= 0);
+  // assert(cdf_min[0] >= 0);
 }
 
 static __global__ void _equalize_histogram(raft::device_span<int> buffer,

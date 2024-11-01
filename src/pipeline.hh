@@ -8,6 +8,8 @@
 #include <string>
 #include <raft/core/handle.hpp>
 #include <rmm/device_buffer.hpp>
+
+#include "cuda_tools/memory_pool.cuh"
 #include "fix_gpu.cuh"
 
 static std::string get_number(const std::string& str)
