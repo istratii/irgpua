@@ -9,6 +9,7 @@
 #include <raft/core/handle.hpp>
 #include <rmm/device_buffer.hpp>
 
+#include "fix_cpu.cuh"
 #include "fix_gpu.cuh"
 
 static std::string get_number(const std::string& str)
@@ -32,14 +33,20 @@ struct Pipeline
   {
     const unsigned int N = filepaths.size();
     images = std::vector<Image>(N);
+#ifndef _IRGPUA_CPU
     handlers = std::vector<raft::handle_t>(N);
+#endif
 
 #pragma omp parallel for
     for (std::size_t ii = 0; ii < N; ++ii)
       {
         const int image_id = std::stoi(get_number(filepaths[ii]));
         images[ii] = Image(filepaths[ii], image_id);
+#ifndef _IRGPUA_CPU
         fix_image_gpu(images[ii], handlers[ii].get_stream());
+#else
+        fix_image_cpu(images[ii]);
+#endif
       }
 
     CUDA_CHECK_ERROR(cudaDeviceSynchronize());
@@ -48,5 +55,7 @@ struct Pipeline
   Image&& get_image(int i) { return std::move(images[i]); }
 
   std::vector<Image> images;
+#ifndef _IRGPUA_CPU
   std::vector<raft::handle_t> handlers;
+#endif
 };
