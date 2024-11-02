@@ -9,10 +9,14 @@ static __global__ void _map_fix(raft::device_span<int> buffer_dspan)
   if (idx < buffer_dspan.size())
     buffer_dspan[idx] += ASSOC_VAL(idx);
 }
-#else
+#else // _IRGPUA_GPU_INDUS
 struct MapFixFunctor
 {
-  __device__ int operator()(int idx) const { return idx + ASSOC_VAL(idx); }
+  raft::device_span<int> buffer_dspan;
+  __device__ void operator()(int idx) const
+  {
+    buffer_dspan[idx] += ASSOC_VAL(idx);
+  }
 };
 #endif
 
@@ -26,9 +30,9 @@ void map_fix(raft::device_span<int> buffer_dspan, cudaStream_t stream)
     (buffer_dspan.size() + block_size - 1) / block_size;
   _map_fix<<<grid_size, block_size, 0, stream>>>(buffer_dspan);
 #else // _IRGPUA_GPU_INDUS
-  thrust::device_ptr<int> buffer_ptr(buffer_dspan.data());
-  thrust::transform(thrust::cuda::par.on(stream), buffer_ptr,
-                    buffer_ptr + buffer_dspan.size(), buffer_ptr,
-                    MapFixFunctor());
+  thrust::for_each(thrust::cuda::par.on(stream),
+                   thrust::make_counting_iterator(static_cast<size_t>(0)),
+                   thrust::make_counting_iterator(buffer_dspan.size()),
+                   MapFixFunctor{buffer_dspan});
 #endif
 }

@@ -56,10 +56,11 @@ struct EqualizeFunctor
 {
   int cdf_min;
   unsigned int N;
+  thrust::device_ptr<int> hist;
 
   __device__ int operator()(int value) const
   {
-    float tmp = value - cdf_min;
+    float tmp = hist[value] - cdf_min;
     tmp /= static_cast<float>(N - cdf_min + 1e-9f);
     tmp *= 255.0f;
     return roundf(tmp);
@@ -88,8 +89,7 @@ void equalize_histogram(rmm::device_buffer& memchunk,
   // compute histogram
   _histogram<<<grid_size, block_size, bytes_per_histogram, stream>>>(
     buffer_dspan, histogram_dspan);
-  // equalize histogram
-  // compute cumulative histogram sum
+  // equalize histogram compute cumulative histogram sum
   scan(memchunk, histogram_dspan, SCAN_INCLUSIVE);
   _compute_first_non_zero<<<1, 1, 0, stream>>>(histogram_dspan, cdf_min_dspan);
   _equalize_histogram<<<grid_size, block_size, 0, stream>>>(
@@ -118,6 +118,7 @@ void equalize_histogram(rmm::device_buffer& memchunk,
     thrust::cuda::par.on(stream), buffer_dspan.begin(), buffer_dspan.end(),
     buffer_dspan.begin(),
     EqualizeFunctor{thrust::device_pointer_cast(cdf_min_dspan.data())[0],
-                    static_cast<unsigned int>(buffer_dspan.size())});
+                    static_cast<unsigned int>(buffer_dspan.size()),
+                    thrust::device_pointer_cast(histogram_dspan.data())});
 #endif
 }
