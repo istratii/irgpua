@@ -27,10 +27,10 @@ include_directories(src)
 
 # Build CPU version
 # _IRGPUA_CPU
-# add_executable(main_cpu src/main.cu src/fix_cpu.cu)
-# target_compile_definitions(main_cpu PRIVATE _IRGPUA_CPU)
-# target_compile_options(main_cpu PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${OpenMP_CXX_FLAGS}>)
-# target_link_libraries(main_cpu PUBLIC OpenMP::OpenMP_CXX)
+add_executable(main_cpu src/main.cu src/fix_cpu.cu)
+target_compile_definitions(main_cpu PRIVATE _IRGPUA_CPU)
+target_compile_options(main_cpu PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${OpenMP_CXX_FLAGS}>)
+target_link_libraries(main_cpu PUBLIC OpenMP::OpenMP_CXX)
 
 # Build GPU version
 # _IRGPUA_GPU
@@ -50,16 +50,16 @@ target_link_libraries(main_gpu PUBLIC OpenMP::OpenMP_CXX rmm::rmm raft::raft)
 
 # Build GPU INDUS version
 # _IRGPUA_GPU_INDUS
-# add_executable(main_gpu_indus
-#   src/main.cu
-#   src/fix_cpu.cu
-#   src/scan.cu
-#   src/histogram.cu
-#   src/map_fix.cu
-#   src/compact.cu
-#   src/fix_gpu.cu
-#   src/cuda_tools/memory_pool.cu
-#   src/reduce.cu)
-# target_compile_definitions(main_gpu_indus PRIVATE _IRGPUA_GPU_INDUS)
-# target_compile_options(main_gpu_indus PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${OpenMP_CXX_FLAGS}>)
-# target_link_libraries(main_gpu_indus PUBLIC OpenMP::OpenMP_CXX rmm::rmm raft::raft)
+add_executable(main_gpu_indus
+  src/main.cu
+  src/fix_cpu.cu
+  src/scan.cu
+  src/histogram.cu
+  src/map_fix.cu
+  src/compact.cu
+  src/fix_gpu.cu
+  src/cuda_tools/memory_pool.cu
+  src/reduce.cu)
+target_compile_definitions(main_gpu_indus PRIVATE _IRGPUA_GPU_INDUS)
+target_compile_options(main_gpu_indus PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${OpenMP_CXX_FLAGS}>)
+target_link_libraries(main_gpu_indus PUBLIC OpenMP::OpenMP_CXX rmm::rmm raft::raft)

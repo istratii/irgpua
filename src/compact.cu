@@ -43,12 +43,12 @@ void compact(rmm::device_buffer& memchunk, raft::device_span<int> buffer_dspan)
   scan(memchunk, pred_dspan, SCAN_EXCLUSIVE);
   _scatter<<<grid_size, block_size, 0, stream>>>(buffer_dspan, pred_dspan);
 #else // _IRGPUA_GPU_INDUS
-  // thrust::transform(thrust::cuda::par.on(stream), buffer_dspan.begin(),
-  //                   buffer_dspan.end(), pred_dspan.begin(), IsNotGarbage());
-  // thrust::exclusive_scan(thrust::cuda::par.on(stream), pred_dspan.begin(),
-  //                        pred_dspan.end(), pred_dspan.begin());
-  // thrust::scatter_if(thrust::cuda::par.on(stream), buffer_dspan.begin(),
-  //                    buffer_dspan.end(), pred_dspan.begin(), pred_dspan.begin(),
-  //                    buffer_dspan.begin(), IsNotGarbage());
+  thrust::transform(thrust::cuda::par.on(stream), buffer_dspan.begin(),
+                    buffer_dspan.end(), pred_dspan.begin(), IsNotGarbage());
+  thrust::exclusive_scan(thrust::cuda::par.on(stream), pred_dspan.begin(),
+                         pred_dspan.end(), pred_dspan.begin());
+  thrust::scatter_if(thrust::cuda::par.on(stream), buffer_dspan.begin(),
+                     buffer_dspan.end(), pred_dspan.begin(), pred_dspan.begin(),
+                     buffer_dspan.begin(), IsNotGarbage());
 #endif
 }

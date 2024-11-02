@@ -38,8 +38,8 @@ void reduce(raft::device_span<int> buffer_dspan,
   _reduce<<<grid_size, block_size, block_size * sizeof(int), stream>>>(
     buffer_dspan, total_dspan);
 #else // _IRGPUA_GPU_INDUS
-  // thrust::device_pointer_cast(total_dspan.data())[0] =
-  //   thrust::reduce(thrust::cuda::par.on(stream), buffer_dspan.begin(),
-  //                  buffer_dspan.end(), 0, thrust::plus<int>());
+  thrust::device_pointer_cast(total_dspan.data())[0] =
+    thrust::reduce(thrust::cuda::par.on(stream), buffer_dspan.begin(),
+                   buffer_dspan.end(), 0, thrust::plus<int>());
 #endif
 }
