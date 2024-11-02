@@ -1,6 +1,10 @@
 #pragma once
 
 #include <cuda/atomic>
+#include <thrust/device_vector.h>
+#include <thrust/scan.h>
+#include <thrust/transform.h>
+#include <cub/cub.cuh>
 #include <raft/core/device_span.hpp>
 #include <raft/core/handle.hpp>
 #include <rmm/device_scalar.hpp>

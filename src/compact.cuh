@@ -1,6 +1,12 @@
 #pragma once
 
 #include <cuda_runtime.h>
+#include <thrust/copy.h>
+#include <thrust/device_vector.h>
+#include <thrust/execution_policy.h>
+#include <thrust/functional.h>
+#include <thrust/scan.h>
+#include <thrust/scatter.h>
 #include <raft/core/device_span.hpp>
 #include <raft/core/handle.hpp>
 #include <rmm/device_buffer.hpp>
