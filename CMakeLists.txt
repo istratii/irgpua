@@ -30,7 +30,7 @@ include_directories(src)
 add_executable(main_cpu src/main.cu src/fix_cpu.cu)
 target_compile_definitions(main_cpu PRIVATE _IRGPUA_CPU)
 target_compile_options(main_cpu PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${OpenMP_CXX_FLAGS}>)
-target_link_libraries(main_cpu PUBLIC OpenMP::OpenMP_CXX)
+target_link_libraries(main_cpu PUBLIC OpenMP::OpenMP_CXX raft::raft)
 
 # Build GPU version
 # _IRGPUA_GPU

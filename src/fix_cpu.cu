@@ -1,13 +1,9 @@
 #include "fix_cpu.cuh"
-#include "image.hh"
-
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <numeric>
 
 void fix_image_cpu(Image& to_fix)
 {
+  raft::common::nvtx::range fscope("fix image cpu");
+
   const int image_size = to_fix.width * to_fix.height;
 
   // #1 Compact
