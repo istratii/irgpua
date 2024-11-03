@@ -8,7 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "cuda_tools/memory_pool.cuh"
+#ifndef _IRGPUA_CPU
+#  include "cuda_tools/memory_pool.cuh"
+#endif
 
 struct Image
 {
@@ -44,19 +46,23 @@ struct Image
 
     if (magic == "P5")
       {
-        // DONE : Isn't there a better way to allocate the CPU Memory
-        // To speed up the Host-to-Device Transfert ?
-        // buffer = (int*)malloc(width * height * sizeof(int));
-        buffer = static_cast<int*>(
-          allocate_host_pinned_memory(width * height * sizeof(int)));
+        actual_size = width * height;
+#ifndef _IRGPUA_CPU
+        buffer = static_cast<int*>(allocate_host_pinned_memory(
+          actual_size * sizeof(int) + sizeof(uint64_t)));
+        to_sort.total = reinterpret_cast<uint64_t*>(buffer + actual_size);
+        *(to_sort.total) = 0;
+#else
+        buffer = (int*)malloc(width * height * sizeof(int));
+#endif
+
         infile.seekg(1, infile.cur);
-        for (int i = 0; i < width * height; ++i)
+        for (int i = 0; i < actual_size; ++i)
           {
             uint8_t pixel_char;
             infile >> std::noskipws >> pixel_char;
             buffer[i] = pixel_char;
           }
-        actual_size = width * height;
       }
     else if (magic == "P?")
       {
@@ -73,13 +79,14 @@ struct Image
           while (std::getline(lineStream, s, ';'))
             ++image_size;
         }
-        // DONE : Isn't there a better way to allocate the CPU Memory
-        // To speed up the Host-to-Device Transfert ?
-        // buffer = (int*)malloc(image_size * sizeof(int));
+#ifndef _IRGPUA_CPU
         buffer = static_cast<int*>(allocate_host_pinned_memory(
           image_size * sizeof(int) + sizeof(uint64_t)));
         to_sort.total = reinterpret_cast<uint64_t*>(buffer + image_size);
         *(to_sort.total) = 0;
+#else
+        buffer = (int*)malloc(image_size * sizeof(int));
+#endif
 
         std::stringstream lineStream(line);
         std::string s;
@@ -126,7 +133,11 @@ struct Image
   int actual_size = -1;
   struct ToSort
   {
+#ifndef _IRGPUA_CPU
     uint64_t* total = nullptr;
+#else
+    uint64_t total = 0;
+#endif
     int id = -1;
   } to_sort;
 };

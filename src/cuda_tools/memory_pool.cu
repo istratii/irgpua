@@ -13,7 +13,7 @@ static std::shared_ptr<
 
 void init_device_memory_pool(size_t bytes)
 {
-  bytes = ALIGN32(bytes);
+  bytes = ALIGN128(bytes);
 
   if (!device_memory_resource)
     device_memory_resource = std::make_shared<rmm::mr::cuda_memory_resource>();

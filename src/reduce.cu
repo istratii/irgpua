@@ -1,5 +1,6 @@
 #include "reduce.cuh"
 
+#ifdef _IRGPUA_GPU
 static __global__ void _reduce(raft::device_span<int> buffer,
                                raft::device_span<int> total)
 {
@@ -20,6 +21,8 @@ static __global__ void _reduce(raft::device_span<int> buffer,
   if (tid == 0)
     atomicAdd(total.data(), sdata[0]);
 }
+#else // _IGRPUA_GPU_INDUS
+#endif
 
 void reduce(raft::device_span<int> buffer_dspan,
             raft::device_span<int> total_dspan,
@@ -27,10 +30,16 @@ void reduce(raft::device_span<int> buffer_dspan,
 {
   raft::common::nvtx::range fscope("reduce");
 
-  constexpr unsigned int block_size = 64;
+#ifdef _IRGPUA_GPU
+  constexpr unsigned int block_size = 512;
   const unsigned int grid_size =
     (buffer_dspan.size() + block_size - 1) / block_size;
 
   _reduce<<<grid_size, block_size, block_size * sizeof(int), stream>>>(
     buffer_dspan, total_dspan);
+#else // _IRGPUA_GPU_INDUS
+  thrust::device_pointer_cast(total_dspan.data())[0] =
+    thrust::reduce(thrust::cuda::par.on(stream), buffer_dspan.begin(),
+                   buffer_dspan.end(), 0, thrust::plus<int>());
+#endif
 }
