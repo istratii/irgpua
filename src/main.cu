@@ -6,6 +6,7 @@
 #include <vector>
 
 #ifndef _IRGPUA_CPU
+#  include "cuda_tools/constants.hh"
 #  include "cuda_tools/memory_pool.cuh"
 #  include "fix_gpu.cuh"
 #endif
@@ -15,7 +16,7 @@
 
 #ifndef _IRGPUA_CPU
 #  define HOST_PINNED_MEMORY_POOL_SIZE (192 * (1 << 20)) // 192 mega bytes
-#  define DEVICE_MEMORY_POOL_SIZE (1 << 30)              // one gigabyte
+#  define DEVICE_MEMORY_POOL_SIZE (bytes_per_chunk * 30) // one gigabyte
 #endif
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])

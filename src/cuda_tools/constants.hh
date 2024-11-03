@@ -9,11 +9,11 @@ constexpr size_t bytes_per_predicate = bytes_per_image;
 #ifdef _IRGPUA_GPU
 constexpr size_t bytes_per_scan = ALIGN128(sizeof(int) * (4096 * 3 + 1));
 #else // _IRGPUA_GPU_INDUS
-constexpr size_t bytes_per_temp_storage = ALIGN128(142'000);
+constexpr size_t bytes_per_temp_storage = 0; // ALIGN128(142'000);
 #endif
 constexpr size_t bytes_per_histogram = sizeof(int) * 256;
-constexpr size_t bytes_per_cdf_min = ALIGN128(sizeof(int));
-constexpr size_t bytes_per_total = ALIGN128(sizeof(int));
+constexpr size_t bytes_per_cdf_min = sizeof(int);
+constexpr size_t bytes_per_total = sizeof(int);
 constexpr size_t bytes_per_chunk = bytes_per_image + bytes_per_predicate
   + bytes_per_histogram + bytes_per_cdf_min + bytes_per_total +
 #ifdef _IRGPUA_GPU

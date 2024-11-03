@@ -96,14 +96,18 @@ void equalize_histogram(rmm::device_buffer& memchunk,
     buffer_dspan, histogram_dspan, cdf_min_dspan);
 #else // _IRGPUA_GPU_INDUS
   constexpr int HIST_SIZE = 256;
-  raft::device_span<char> temp_storage_dspan(
-    reinterpret_cast<char*>(chunk + temp_storage_offset),
-    bytes_per_temp_storage);
-  size_t temp_storage_bytes = bytes_per_temp_storage;
+  void* d_temp_storage = nullptr;
+  size_t temp_storage_bytes = 0;
   cub::DeviceHistogram::HistogramEven<int*, int, int, std::size_t>(
-    static_cast<void*>(temp_storage_dspan.data()), temp_storage_bytes,
-    buffer_dspan.data(), histogram_dspan.data(), HIST_SIZE, 0, HIST_SIZE - 1,
-    buffer_dspan.size(), stream);
+    d_temp_storage, temp_storage_bytes, buffer_dspan.data(),
+    histogram_dspan.data(), HIST_SIZE, 0, HIST_SIZE - 1, buffer_dspan.size(),
+    stream);
+  rmm::device_buffer temp_storage(temp_storage_bytes, stream);
+  d_temp_storage = temp_storage.data();
+  cub::DeviceHistogram::HistogramEven<int*, int, int, std::size_t>(
+    d_temp_storage, temp_storage_bytes, buffer_dspan.data(),
+    histogram_dspan.data(), HIST_SIZE, 0, HIST_SIZE - 1, buffer_dspan.size(),
+    stream);
   thrust::inclusive_scan(thrust::cuda::par.on(stream), histogram_dspan.begin(),
                          histogram_dspan.end(), histogram_dspan.begin());
   thrust::device_pointer_cast(cdf_min_dspan.data())[0] =

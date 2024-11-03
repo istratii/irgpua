@@ -42,7 +42,7 @@ struct Pipeline
     handlers = std::vector<raft::handle_t>(N);
 #endif
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
     for (std::size_t ii = 0; ii < N; ++ii)
       {
         const int image_id = std::stoi(get_number(filepaths[ii]));
