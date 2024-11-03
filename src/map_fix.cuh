@@ -1,10 +1,7 @@
 #pragma once
 
-#include <thrust/device_vector.h>
 #include <thrust/transform.h>
 #include <raft/core/device_span.hpp>
-#include <raft/core/handle.hpp>
-#include <rmm/device_uvector.hpp>
 
 #include "cuda_tools/cuda_error_checking.cuh"
 #include "cuda_tools/nvtx.cuh"

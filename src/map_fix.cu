@@ -25,7 +25,7 @@ void map_fix(raft::device_span<int> buffer_dspan, cudaStream_t stream)
   raft::common::nvtx::range fscope("map fix");
 
 #ifdef _IRGPUA_GPU
-  constexpr unsigned int block_size = 1024;
+  constexpr unsigned int block_size = 512;
   const unsigned int grid_size =
     (buffer_dspan.size() + block_size - 1) / block_size;
   _map_fix<<<grid_size, block_size, 0, stream>>>(buffer_dspan);

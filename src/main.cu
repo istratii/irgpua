@@ -16,7 +16,7 @@
 
 #ifndef _IRGPUA_CPU
 #  define HOST_PINNED_MEMORY_POOL_SIZE (192 * (1 << 20)) // 192 mega bytes
-#  define DEVICE_MEMORY_POOL_SIZE (bytes_per_chunk * 30) // one gigabyte
+#  define DEVICE_MEMORY_POOL_SIZE (bytes_per_chunk * 30)
 #endif
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
@@ -70,14 +70,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
   // Moving the actual images is too expensive, sort image indices instead
   // Copying to an id array and sort it instead
 
-  // TODO OPTIONAL : for you GPU version you can store it the way you want
-  // But just like the CPU version, moving the actual images while sorting will be too slow
   using ToSort = Image::ToSort;
   std::vector<ToSort> to_sort(nb_images);
   std::generate(to_sort.begin(), to_sort.end(),
                 [n = 0, images]() mutable { return images[n++].to_sort; });
 
-  // TODO OPTIONAL : make it GPU compatible (aka faster)
   std::sort(to_sort.begin(), to_sort.end(), [](ToSort a, ToSort b) {
 #ifndef _IRGPUA_CPU
     return *(a.total) < *(b.total);
@@ -113,8 +110,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
   std::cout << "Done, the internet is safe now :)" << '\n';
 
 #ifndef _IRGPUA_CPU
-  // Cleaning
-  // DONE : Don't forget to update this if you change allocation style
   for (int i = 0; i < nb_images; ++i)
     {
       free_host_pinned_memory(images[i].to_sort.total, sizeof(uint64_t));

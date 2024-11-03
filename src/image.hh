@@ -47,8 +47,6 @@ struct Image
     if (magic == "P5")
       {
         actual_size = width * height;
-// DONE : Isn't there a better way to allocate the CPU Memory
-// To speed up the Host-to-Device Transfert ?
 #ifndef _IRGPUA_CPU
         buffer = static_cast<int*>(allocate_host_pinned_memory(
           actual_size * sizeof(int) + sizeof(uint64_t)));
@@ -81,8 +79,6 @@ struct Image
           while (std::getline(lineStream, s, ';'))
             ++image_size;
         }
-// DONE : Isn't there a better way to allocate the CPU Memory
-// To speed up the Host-to-Device Transfert ?
 #ifndef _IRGPUA_CPU
         buffer = static_cast<int*>(allocate_host_pinned_memory(
           image_size * sizeof(int) + sizeof(uint64_t)));

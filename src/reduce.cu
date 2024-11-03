@@ -31,7 +31,7 @@ void reduce(raft::device_span<int> buffer_dspan,
   raft::common::nvtx::range fscope("reduce");
 
 #ifdef _IRGPUA_GPU
-  constexpr unsigned int block_size = 64;
+  constexpr unsigned int block_size = 512;
   const unsigned int grid_size =
     (buffer_dspan.size() + block_size - 1) / block_size;
 

@@ -47,7 +47,7 @@ void compact(rmm::device_buffer& memchunk, raft::device_span<int> buffer_dspan)
     bytes_per_predicate / sizeof(int));
 
   const unsigned int size = buffer_dspan.size();
-  constexpr unsigned int block_size = 1024;
+  constexpr unsigned int block_size = 512;
   const unsigned int grid_size = (size + block_size - 1) / block_size;
 #ifdef _IRGPUA_GPU
   _compact<<<grid_size, block_size, 0, stream>>>(buffer_dspan, pred_dspan);
@@ -62,7 +62,7 @@ void compact(rmm::device_buffer& memchunk, raft::device_span<int> buffer_dspan)
   //                    buffer_dspan.end(), pred_dspan.begin(),
   //                    buffer_dspan.begin(), buffer_dspan.begin(),
   //                    IsNotGarbage());
-  // this also appears to now work
+  // this also appears not to work
   // thrust::for_each(thrust::cuda::par.on(stream),
   //                  thrust::make_counting_iterator(0UL),
   //                  thrust::make_counting_iterator(buffer_dspan.size()),

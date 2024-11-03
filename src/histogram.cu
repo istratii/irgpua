@@ -78,7 +78,6 @@ void equalize_histogram(rmm::device_buffer& memchunk,
   raft::device_span<int> histogram_dspan(
     reinterpret_cast<int*>(chunk + histogram_offset),
     bytes_per_histogram / sizeof(int));
-  // its part from memchunk is already set to 0
   raft::device_span<int> cdf_min_dspan(
     reinterpret_cast<int*>(chunk + cdf_min_offset), 1);
 
