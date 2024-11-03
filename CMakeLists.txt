@@ -53,7 +53,6 @@ target_link_libraries(main_gpu PUBLIC OpenMP::OpenMP_CXX rmm::rmm raft::raft)
 add_executable(main_gpu_indus
   src/main.cu
   src/fix_cpu.cu
-  src/scan.cu
   src/histogram.cu
   src/map_fix.cu
   src/compact.cu
